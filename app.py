@@ -1,83 +1,43 @@
 import streamlit as st
-import spotipy
-from spotipy.oauth2 import SpotifyOAuth
 import pandas as pd
+import matplotlib.pyplot as plt
 
-# --- Page Setup ---
-st.set_page_config(page_title="SonicMirror", layout="wide")
-st.title("🎶 SonicMirror – Spotify Playlist Analyzer")
+st.set_page_config(page_title="SonicMirror - Playlist Analyzer", layout="wide")
+st.title("🎶 SonicMirror – Upload Your Spotify Playlists")
 
-# --- Setup Auth Manager ---
-auth_manager = SpotifyOAuth(
-    client_id=st.secrets["SPOTIPY_CLIENT_ID"],
-    client_secret=st.secrets["SPOTIPY_CLIENT_SECRET"],
-    redirect_uri=st.secrets["SPOTIPY_REDIRECT_URI"],
-    scope="playlist-read-private playlist-read-collaborative user-library-read"
-)
+# --- File Upload ---
+uploaded_file = st.file_uploader("Upload your Exportify playlist file (CSV or Excel)", type=["xlsx", "xls", "csv"])
 
-# --- Connect to Spotify ---
-sp = None
-auth_url = auth_manager.get_authorize_url()
+if uploaded_file:
+    # --- Read the file ---
+    if uploaded_file.name.endswith(".csv"):
+        df = pd.read_csv(uploaded_file)
+        df["Playlist"] = "Uploaded CSV"
+    else:
+        xls = pd.ExcelFile(uploaded_file)
+        df = pd.concat([xls.parse(sheet).assign(Playlist=sheet) for sheet in xls.sheet_names], ignore_index=True)
 
-try:
-    sp = spotipy.Spotify(auth_manager=auth_manager)
-    user = sp.current_user()
-    st.success(f"✅ Logged in as: {user['display_name']}")
-except Exception as e:
-    st.warning("🔐 Not logged in or token expired.")
-    st.markdown(f"[Click here to log in with Spotify]({auth_url})")
-    st.error(f"Error: {e}")
+    # --- Clean and prepare ---
+    df = df.dropna(subset=["Track Name", "Artist Name(s)"])
+    df = df[df["Duration (ms)"] > 0]  # skip broken rows
 
+    st.subheader("📋 Playlist Overview")
+    st.write(f"**Tracks loaded:** {len(df)}")
+    st.dataframe(df[["Track Name", "Artist Name(s)", "Playlist", "Release Date", "Popularity"]].head())
 
-# --- Playlist Selection ---
-playlists = sp.current_user_playlists()["items"]
-playlist_names = [p["name"] for p in playlists]
-playlist_map = {p["name"]: p["id"] for p in playlists}
+    # --- Audio Summary Metrics ---
+    st.subheader("🎛 Key Audio Averages")
+    metrics = ["Energy", "Valence", "Danceability", "Acousticness", "Instrumentalness", "Liveness", "Tempo"]
+    st.dataframe(df[metrics].mean().round(3).rename("Average").to_frame())
 
-st.subheader("🎛 Select Playlists to Analyze")
-selected_names = st.multiselect("Choose one or more playlists", playlist_names)
+    # --- Chart: Energy vs Valence ---
+    st.subheader("🎨 Mood Map: Energy vs Valence")
+    fig, ax = plt.subplots()
+    ax.scatter(df["Energy"], df["Valence"], alpha=0.5)
+    ax.set_xlabel("Energy")
+    ax.set_ylabel("Valence")
+    ax.set_title("Track Mood Distribution")
+    st.pyplot(fig)
 
-# --- If selected and button clicked ---
-if selected_names and st.button("Analyze Selected Playlists"):
-    all_tracks = []
-
-    for name in selected_names:
-        playlist_id = playlist_map[name]
-        offset = 0
-        while True:
-            results = sp.playlist_tracks(playlist_id, offset=offset, limit=100)
-            tracks = results['items']
-            if not tracks:
-                break
-
-            for item in tracks:
-                track = item['track']
-                if track and track["id"]:
-                    all_tracks.append({
-                        "playlist": name,
-                        "name": track["name"],
-                        "id": track["id"],
-                        "artists": ", ".join([a["name"] for a in track["artists"]]),
-                        "album": track["album"]["name"]
-                    })
-            offset += 100
-
-    # --- Audio Features ---
-    def get_audio_features_in_batches(track_ids):
-        audio_features = []
-        for i in range(0, len(track_ids), 100):
-            batch = track_ids[i:i+100]
-            audio_features.extend(sp.audio_features(batch))
-        return audio_features
-
-    track_ids = [t["id"] for t in all_tracks if t["id"]]
-    audio_features = get_audio_features_in_batches(track_ids)
-
-    for i, features in enumerate(audio_features):
-        if features:
-            all_tracks[i].update(features)
-
-    df = pd.DataFrame(all_tracks)
-    st.success(f"🎉 Loaded {len(df)} tracks from {len(selected_names)} playlist(s).")
-    st.dataframe(df[["playlist", "name", "artists", "energy", "valence", "danceability", "tempo"]])
-    st.session_state.df = df
+else:
+    st.info("📁 Upload a playlist file to get started.")
