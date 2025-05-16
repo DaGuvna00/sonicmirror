@@ -34,8 +34,8 @@ else:
 
     # ---- Playlist Selection ----
     playlists = sp.current_user_playlists()['items']
-    playlist_names = [p['name'] for p in playlists]
-    playlist_map = {p['name']: p['id'] for p in playlists]
+    playlist_names = {p['name'] for p in playlists}
+    playlist_map = {p['name']: p['id'] for p in playlists}
 
     st.subheader("🎶 Select Playlists to Analyze")
     selected_names = st.multiselect("Choose one or more playlists", playlist_names)
