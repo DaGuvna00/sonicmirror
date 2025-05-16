@@ -30,6 +30,7 @@ if uploaded_files:
         all_dfs.append(df)
 
     df = pd.concat(all_dfs, ignore_index=True)
+    st.write("🧾 Available columns:", df.columns.tolist())
     df = df.dropna(subset=["Track Name", "Artist Name(s)"])
     df = df[df["Duration (ms)"] > 0]
 
@@ -61,6 +62,25 @@ if uploaded_files:
     ax2.set_title("Number of Songs by Decade")
     ax2.set_ylabel("Track Count")
     st.pyplot(fig2)
+
+    # 📆 Time Between Track Release and Date Added
+st.subheader("📆 Time Between Track Release and When You Added It")
+
+df["Release Date"] = pd.to_datetime(df["Release Date"], errors="coerce")
+df["Date Added"] = pd.to_datetime(df["Date Added"], errors="coerce")
+df["Days Until Added"] = (df["Date Added"] - df["Release Date"]).dt.days
+
+valid_days = df["Days Until Added"].dropna()
+
+if not valid_days.empty:
+    fig_delay, ax_delay = plt.subplots()
+    ax_delay.hist(valid_days, bins=30, color="skyblue", edgecolor="black")
+    ax_delay.set_title("Time Between Track Release and When You Added It")
+    ax_delay.set_xlabel("Days Between Release and Add Date")
+    ax_delay.set_ylabel("Number of Tracks")
+    st.pyplot(fig_delay)
+else:
+    st.info("No valid 'Release Date' and 'Date Added' data available to generate this chart.")
 
     # 🎤 Top Artists
     st.subheader("🎤 Top 10 Artists")
