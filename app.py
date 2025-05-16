@@ -82,11 +82,7 @@ def get_audio_features_in_batches(track_ids):
             st.error(f"⚠️ Error fetching batch {i//100+1}: {e}")
     return audio_features
 
-
-
-
-
-        track_ids = [t["id"] for t in all_tracks if t["id"]]  # Filter out missing/null track IDs
+    track_ids = [t["id"] for t in all_tracks if t["id"]]  # Filter out missing/null track IDs
 
         audio_features = get_audio_features_in_batches(track_ids)
 
