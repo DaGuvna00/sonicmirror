@@ -67,7 +67,7 @@ if uploaded_files:
 st.subheader("📆 Time Between Track Release and When You Added It")
 
 df["Release Date"] = pd.to_datetime(df["Release Date"], errors="coerce")
-df["Date Added"] = pd.to_datetime(df["Date Added"], errors="coerce")
+df["Date Added"] = pd.to_datetime(df["Added At"], errors="coerce")
 df["Days Until Added"] = (df["Date Added"] - df["Release Date"]).dt.days
 
 valid_days = df["Days Until Added"].dropna()
