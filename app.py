@@ -85,7 +85,7 @@ st.pyplot(fig)
 
 
     # 🎤 Top Artists
-    st.subheader("🎤 Top 10 Artists")
+st.subheader("🎤 Top 10 Artists")
     top_artists = df["Artist Name(s)"].value_counts().nlargest(10)
     fig3, ax3 = plt.subplots()
     top_artists.plot(kind="barh", ax=ax3)
