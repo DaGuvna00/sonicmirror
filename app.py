@@ -84,7 +84,7 @@ def get_audio_features_in_batches(track_ids):
 
     track_ids = [t["id"] for t in all_tracks if t["id"]]  # Filter out missing/null track IDs
 
-        audio_features = get_audio_features_in_batches(track_ids)
+    audio_features = get_audio_features_in_batches(track_ids)
 
         # ---- Merge features with track info ----
         for i, features in enumerate(audio_features):
