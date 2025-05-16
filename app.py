@@ -6,16 +6,28 @@ import numpy as np
 st.set_page_config(page_title="SonicMirror - Playlist Analyzer", layout="wide")
 st.title("🎶 SonicMirror – Upload Your Spotify Playlists")
 
-uploaded_file = st.file_uploader("Upload your Exportify playlist file (CSV or Excel)", type=["xlsx", "xls", "csv"])
+uploaded_files = st.file_uploader(
+    "Upload one or more Exportify playlist files (CSV or Excel)", 
+    type=["xlsx", "xls", "csv"], 
+    accept_multiple_files=True
+)
 
-if uploaded_file:
-    if uploaded_file.name.endswith(".csv"):
-        df = pd.read_csv(uploaded_file)
-        df["Playlist"] = "Uploaded CSV"
-    else:
-        xls = pd.ExcelFile(uploaded_file)
-        df = pd.concat([xls.parse(sheet).assign(Playlist=sheet) for sheet in xls.sheet_names], ignore_index=True)
+if uploaded_files:
+    all_dfs = []
 
+    for file in uploaded_files:
+        filename = file.name.rsplit(".", 1)[0]  # strip extension for playlist name
+
+        if file.name.endswith(".csv"):
+            df = pd.read_csv(file)
+        else:
+            xls = pd.ExcelFile(file)
+            df = pd.concat([xls.parse(sheet) for sheet in xls.sheet_names], ignore_index=True)
+
+        df["Playlist"] = filename
+        all_dfs.append(df)
+
+    df = pd.concat(all_dfs, ignore_index=True)
     df = df.dropna(subset=["Track Name", "Artist Name(s)"])
     df = df[df["Duration (ms)"] > 0]
 
