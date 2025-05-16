@@ -24,7 +24,7 @@ if "access_token" not in st.session_state:
     if "code" in query_params:
         code = query_params["code"][0]
         token_info = auth_manager.get_access_token(code, as_dict=False)
-        st.session_state.access_token = token_info['access_token']
+        st.session_state["access_token"] = token_info["access_token"]
         st.experimental_rerun()
 else:
     # Logged in
