@@ -6,10 +6,10 @@ from spotipy.cache_handler import CacheHandler
 st.set_page_config(page_title="SonicMirror", layout="wide")
 st.title("🎶 SonicMirror – Spotify Playlist Analyzer")
 
-# ✅ Trigger rerun after Spotify redirects with ?code=...
-if st.experimental_get_query_params().get("code") and "reran" not in st.session_state:
+# ✅ Automatically rerun the app if redirected from Spotify
+if "code" in st.query_params and "reran" not in st.session_state:
     st.session_state.reran = True
-    st.experimental_rerun()
+    st.rerun()
 
 # Setup in-memory token cache
 if "token_info" not in st.session_state:
@@ -22,7 +22,7 @@ class StreamlitTokenCache(CacheHandler):
     def save_token_to_cache(self, token_info):
         st.session_state.token_info = token_info
 
-# Setup Spotify auth
+# Spotify auth
 auth_manager = SpotifyOAuth(
     client_id=st.secrets["SPOTIPY_CLIENT_ID"],
     client_secret=st.secrets["SPOTIPY_CLIENT_SECRET"],
@@ -31,7 +31,7 @@ auth_manager = SpotifyOAuth(
     cache_handler=StreamlitTokenCache()
 )
 
-# Run login
+# If not logged in, show login link
 if not auth_manager.get_cached_token():
     auth_url = auth_manager.get_authorize_url()
     st.warning("🔐 Please log in with Spotify to continue:")
@@ -45,5 +45,6 @@ else:
     st.subheader("🎵 Your Spotify Playlists")
     playlists = sp.current_user_playlists()
     for playlist in playlists['items']:
-        st.markdown(f"- **{playlist['name']}** ({playlist['tracks']['total']} tracks)")
-
+        name = playlist['name']
+        total = playlist['tracks']['total']
+        st.markdown(f"- **{name}** ({total} tracks)")
