@@ -190,11 +190,22 @@ if uploaded_files:
     else:
         st.warning("No genre data found to generate word cloud.")
 
-    import requests
+   st.subheader("🧪 Hugging Face Test")
+
+if st.button("Run GPT-2 Test"):
+    test_prompt = "Describe a playlist with high energy, low acousticness and high danceability."
+
     response = requests.post(
-    "https://api-inference.huggingface.co/models/gpt2",
-    headers={"Authorization": f"Bearer YOUR_TOKEN_HERE"},
-    json={"inputs": "Describe a playlist with high energy, low acousticness and high danceability."}
-)
-    print(response.status_code)
-    print(response.json())
+        "https://api-inference.huggingface.co/models/gpt2",
+        headers={"Authorization": f"Bearer {st.secrets['HF_TOKEN']}"},
+        json={"inputs": test_prompt}
+    )
+
+    st.write(f"Response code: {response.status_code}")
+
+    if response.status_code == 200:
+        result = response.json()
+        st.success("✅ Response:")
+        st.write(result[0]["generated_text"])
+    else:
+        st.error(f"❌ API Error {response.status_code}: {response.text}")
