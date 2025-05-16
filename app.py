@@ -1,3 +1,4 @@
+
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -40,42 +41,39 @@ if uploaded_files:
     df = df[df["Duration (ms)"] > 0]
 
     # 🧠 Playlist Personality Summary (AI-Generated)
-st.subheader("🧠 Playlist Personality Summary")
+    st.subheader("🧠 Playlist Personality Summary")
 
-if "Valence" in df.columns and "Energy" in df.columns:
-    import requests
+    if "Valence" in df.columns and "Energy" in df.columns:
+        # Create summary prompt
+        average_vals = df[["Valence", "Energy", "Danceability", "Acousticness", "Tempo"]].mean().round(2)
+        summary_prompt = f"""
+        Based on the following average Spotify audio features:
 
-    # Create summary prompt
-    average_vals = df[["Valence", "Energy", "Danceability", "Acousticness", "Tempo"]].mean().round(2)
-    summary_prompt = f"""
-    Based on the following average Spotify audio features:
+        - Valence (happiness): {average_vals['Valence']}
+        - Energy: {average_vals['Energy']}
+        - Danceability: {average_vals['Danceability']}
+        - Acousticness: {average_vals['Acousticness']}
+        - Tempo: {average_vals['Tempo']}
 
-    - Valence (happiness): {average_vals['Valence']}
-    - Energy: {average_vals['Energy']}
-    - Danceability: {average_vals['Danceability']}
-    - Acousticness: {average_vals['Acousticness']}
-    - Tempo: {average_vals['Tempo']}
+        Write a short, insightful and engaging personality analysis of the user’s music taste.
+        """
 
-    Write a short, insightful and engaging personality analysis of the user’s music taste.
-    """
+        with st.spinner("Analyzing your vibe..."):
+            response = requests.post(
+                "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.1",
+                headers={"Authorization": f"Bearer {st.secrets['HF_TOKEN']}"},
+                json={"inputs": summary_prompt}
+            )
 
-    with st.spinner("Analyzing your vibe..."):
-        response = requests.post(
-            "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.1",
-            headers={"Authorization": f"Bearer {st.secrets['HF_TOKEN']}"},
-            json={"inputs": summary_prompt}
-        )
-
-        if response.status_code == 200:
-            result = response.json()
-            personality_summary = result[0]["generated_text"]
-            st.success("Here's what the AI thinks of your vibe:")
-            st.markdown(f"> {personality_summary}")
-        else:
-            st.error("Something went wrong generating your summary. Try again later.")
-else:
-    st.warning("Not enough features to analyze. Upload a playlist with Energy and Valence data.")
-
+            if response.status_code == 200:
+                result = response.json()
+                personality_summary = result[0]["generated_text"]
+                st.success("Here's what the AI thinks of your vibe:")
+                st.markdown(f"> {personality_summary}")
+            else:
+                st.error("Something went wrong generating your summary. Try again later.")
+    else:
+        st.warning("Not enough features to analyze. Upload a playlist with Energy and Valence data.")
 
     st.subheader("📋 Playlist Overview")
     st.write(f"**Tracks loaded:** {len(df)}")
@@ -173,53 +171,6 @@ else:
         ax8.set_ylabel("Track Count")
         st.pyplot(fig8)
 
-    # 🆚 Playlist Comparison (Radar + Bar + Mood Map)
-    st.subheader("📊 Compare Playlists Side-by-Side")
-    playlist_names = df["Playlist"].unique()
-    selected = st.multiselect("Choose playlists to compare", playlist_names, default=list(playlist_names))
-
-    if selected:
-        features = ["Energy", "Valence", "Danceability", "Acousticness", "Instrumentalness", "Liveness"]
-        avg_df = df[df["Playlist"].isin(selected)].groupby("Playlist")[features].mean()
-
-        # Radar
-        labels = features
-        angles = np.linspace(0, 2 * np.pi, len(labels), endpoint=False).tolist()
-        angles += angles[:1]
-        fig_radar, ax = plt.subplots(subplot_kw={"polar": True}, figsize=(6, 6))
-        for playlist in avg_df.index:
-            values = avg_df.loc[playlist].tolist()
-            values += values[:1]
-            ax.plot(angles, values, label=playlist)
-            ax.fill(angles, values, alpha=0.1)
-        ax.set_xticks(angles[:-1])
-        ax.set_xticklabels(labels)
-        ax.set_title("Playlist Audio Profiles")
-        ax.legend(loc="upper right", bbox_to_anchor=(1.3, 1.1))
-        st.pyplot(fig_radar)
-
-        # Mood Scatter
-        fig_mood, ax2 = plt.subplots()
-        for playlist in selected:
-            pl_df = df[df["Playlist"] == playlist]
-            ax2.scatter(pl_df["Energy"], pl_df["Valence"], alpha=0.4, label=playlist)
-        ax2.set_xlabel("Energy")
-        ax2.set_ylabel("Valence")
-        ax2.set_title("Mood Distribution by Playlist")
-        ax2.legend()
-        st.pyplot(fig_mood)
-
-        # Bar Chart
-        st.subheader("📶 Average Features Per Playlist")
-        st.dataframe(avg_df.round(3).transpose())
-        avg_df_plot = avg_df.transpose()
-        fig_bar, ax3 = plt.subplots(figsize=(10, 5))
-        avg_df_plot.plot(kind="bar", ax=ax3)
-        ax3.set_title("Average Audio Features by Playlist")
-        ax3.set_ylabel("Value")
-        ax3.set_xticklabels(avg_df_plot.index, rotation=0)
-        st.pyplot(fig_bar)
-
     # ☁️ Word Clouds
     st.subheader("☁️ Artist & Genre Word Clouds")
 
@@ -238,38 +189,3 @@ else:
         st.image(genre_wc.to_array(), use_container_width=True)
     else:
         st.warning("No genre data found to generate word cloud.")
-        # 🧠 Playlist Personality Summary (AI-Generated)
-st.subheader("🧠 Playlist Personality Summary")
-
-if "Valence" in df.columns and "Energy" in df.columns:
-    # Create summary text to send
-    average_vals = df[["Valence", "Energy", "Danceability", "Acousticness", "Tempo"]].mean().round(2)
-    summary_prompt = f"""
-    Based on the following average Spotify audio features:
-    
-    - Valence (happiness): {average_vals['Valence']}
-    - Energy: {average_vals['Energy']}
-    - Danceability: {average_vals['Danceability']}
-    - Acousticness: {average_vals['Acousticness']}
-    - Tempo: {average_vals['Tempo']}
-
-    Write a short, fun personality analysis of the user’s music taste.
-    """
-
-    with st.spinner("Analyzing playlist personality..."):
-        response = requests.post(
-            "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.1",
-            headers={"Authorization": f"Bearer {st.secrets['HF_TOKEN']}"},
-            json={"inputs": summary_prompt}
-        )
-
-        if response.status_code == 200:
-            result = response.json()
-            personality_summary = result[0]["generated_text"]
-            st.success("Here's what the AI thinks of your vibe:")
-            st.markdown(f"> {personality_summary}")
-        else:
-            st.error("Something went wrong generating your summary. Try again later.")
-else:
-    st.warning("Missing necessary audio features to generate a personality summary.")
-
