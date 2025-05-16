@@ -190,9 +190,9 @@ if uploaded_files:
     else:
         st.warning("No genre data found to generate word cloud.")
 
-   st.subheader("🧪 Hugging Face Test")
+st.subheader("🧪 Hugging Face Test")
 
-if st.button("Run GPT-2 Test"):
+    if st.button("Run GPT-2 Test"):
     test_prompt = "Describe a playlist with high energy, low acousticness and high danceability."
 
     response = requests.post(
