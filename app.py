@@ -1,14 +1,16 @@
 import streamlit as st
 import pandas as pd
-import matplotlib.pyplot as plt
 import numpy as np
+import matplotlib.pyplot as plt
+from wordcloud import WordCloud
 
 st.set_page_config(page_title="SonicMirror - Playlist Analyzer", layout="wide")
 st.title("🎶 SonicMirror – Upload Your Spotify Playlists")
 
+# --- File Upload ---
 uploaded_files = st.file_uploader(
-    "Upload one or more Exportify playlist files (CSV or Excel)", 
-    type=["xlsx", "xls", "csv"], 
+    "Upload one or more Exportify playlist files (CSV or Excel)",
+    type=["xlsx", "xls", "csv"],
     accept_multiple_files=True
 )
 
@@ -16,7 +18,7 @@ if uploaded_files:
     all_dfs = []
 
     for file in uploaded_files:
-        filename = file.name.rsplit(".", 1)[0]  # strip extension for playlist name
+        filename = file.name.rsplit(".", 1)[0]
 
         if file.name.endswith(".csv"):
             df = pd.read_csv(file)
@@ -40,7 +42,7 @@ if uploaded_files:
     metrics = ["Energy", "Valence", "Danceability", "Acousticness", "Instrumentalness", "Liveness", "Tempo"]
     st.dataframe(df[metrics].mean().round(3).rename("Average").to_frame())
 
-    # 🎨 Chart 1: Energy vs Valence
+    # 🎨 Mood Map
     st.subheader("🎨 Mood Map: Energy vs Valence")
     fig1, ax1 = plt.subplots()
     ax1.scatter(df["Energy"], df["Valence"], alpha=0.5)
@@ -49,7 +51,7 @@ if uploaded_files:
     ax1.set_title("Track Mood Distribution")
     st.pyplot(fig1)
 
-    # 📅 Chart 2: Release Years by Decade
+    # 📅 Songs by Decade
     st.subheader("📅 Songs by Decade")
     df["Release Year"] = pd.to_datetime(df["Release Date"], errors="coerce").dt.year
     df["Decade"] = (df["Release Year"] // 10 * 10).astype("Int64")
@@ -60,7 +62,7 @@ if uploaded_files:
     ax2.set_ylabel("Track Count")
     st.pyplot(fig2)
 
-    # 🎤 Chart 3: Top 10 Artists
+    # 🎤 Top Artists
     st.subheader("🎤 Top 10 Artists")
     top_artists = df["Artist Name(s)"].value_counts().nlargest(10)
     fig3, ax3 = plt.subplots()
@@ -69,7 +71,7 @@ if uploaded_files:
     ax3.invert_yaxis()
     st.pyplot(fig3)
 
-    # 🕸 Chart 4: Radar Chart of Audio Features
+    # 🕸 Radar Chart of Audio Features
     st.subheader("🕸 Audio Feature Profile")
     radar_labels = ["Energy", "Valence", "Danceability", "Acousticness", "Instrumentalness", "Liveness"]
     radar_values = df[radar_labels].mean().tolist()
@@ -84,7 +86,7 @@ if uploaded_files:
     ax4.set_title("Average Audio Profile")
     st.pyplot(fig4)
 
-    # ⚖️ Chart 5: Speechiness vs Instrumentalness
+    # ⚖️ Speechiness vs Instrumentalness
     st.subheader("⚖️ Speechiness vs Instrumentalness")
     fig5, ax5 = plt.subplots()
     ax5.scatter(df["Speechiness"], df["Instrumentalness"], alpha=0.5)
@@ -93,7 +95,7 @@ if uploaded_files:
     ax5.set_title("Vocals vs Instrumental")
     st.pyplot(fig5)
 
-    # 🎵 Chart 6: Tempo Distribution
+    # 🎵 Tempo Distribution
     st.subheader("🎵 Tempo Distribution")
     fig6, ax6 = plt.subplots()
     ax6.hist(df["Tempo"].dropna(), bins=30)
@@ -102,7 +104,7 @@ if uploaded_files:
     ax6.set_title("Tempo Distribution")
     st.pyplot(fig6)
 
-    # 📣 Chart 7: Loudness Distribution
+    # 📣 Loudness Distribution
     if "Loudness" in df.columns:
         st.subheader("📣 Loudness Distribution")
         fig7, ax7 = plt.subplots()
@@ -112,7 +114,7 @@ if uploaded_files:
         ax7.set_title("Loudness Across Tracks")
         st.pyplot(fig7)
 
-    # 🎹 Chart 8: Most Common Keys
+    # 🎹 Most Common Keys
     if "Key" in df.columns:
         st.subheader("🎹 Most Common Musical Keys")
         key_names = {
@@ -127,83 +129,68 @@ if uploaded_files:
         ax8.set_ylabel("Track Count")
         st.pyplot(fig8)
 
-# 🎯 Calculate average metrics per playlist
-features = ["Energy", "Valence", "Danceability", "Acousticness", "Instrumentalness", "Liveness"]
-avg_df = df[df["Playlist"].isin(selected)].groupby("Playlist")[features].mean()
+    # 🆚 Playlist Comparison (Radar + Bar + Mood Map)
+    st.subheader("📊 Compare Playlists Side-by-Side")
+    playlist_names = df["Playlist"].unique()
+    selected = st.multiselect("Choose playlists to compare", playlist_names, default=list(playlist_names))
 
-# 📊 Radar Chart Comparison
-st.subheader("🕸 Audio Feature Comparison (Radar)")
+    if selected:
+        features = ["Energy", "Valence", "Danceability", "Acousticness", "Instrumentalness", "Liveness"]
+        avg_df = df[df["Playlist"].isin(selected)].groupby("Playlist")[features].mean()
 
-import numpy as np
-import matplotlib.pyplot as plt
+        # Radar
+        labels = features
+        angles = np.linspace(0, 2 * np.pi, len(labels), endpoint=False).tolist()
+        angles += angles[:1]
+        fig_radar, ax = plt.subplots(subplot_kw={"polar": True}, figsize=(6, 6))
+        for playlist in avg_df.index:
+            values = avg_df.loc[playlist].tolist()
+            values += values[:1]
+            ax.plot(angles, values, label=playlist)
+            ax.fill(angles, values, alpha=0.1)
+        ax.set_xticks(angles[:-1])
+        ax.set_xticklabels(labels)
+        ax.set_title("Playlist Audio Profiles")
+        ax.legend(loc="upper right", bbox_to_anchor=(1.3, 1.1))
+        st.pyplot(fig_radar)
 
-labels = features
-angles = np.linspace(0, 2 * np.pi, len(labels), endpoint=False).tolist()
-angles += angles[:1]
+        # Mood Scatter
+        fig_mood, ax2 = plt.subplots()
+        for playlist in selected:
+            pl_df = df[df["Playlist"] == playlist]
+            ax2.scatter(pl_df["Energy"], pl_df["Valence"], alpha=0.4, label=playlist)
+        ax2.set_xlabel("Energy")
+        ax2.set_ylabel("Valence")
+        ax2.set_title("Mood Distribution by Playlist")
+        ax2.legend()
+        st.pyplot(fig_mood)
 
-fig, ax = plt.subplots(subplot_kw={"polar": True}, figsize=(6, 6))
+        # Bar Chart
+        st.subheader("📶 Average Features Per Playlist")
+        st.dataframe(avg_df.round(3).transpose())
+        avg_df_plot = avg_df.transpose()
+        fig_bar, ax3 = plt.subplots(figsize=(10, 5))
+        avg_df_plot.plot(kind="bar", ax=ax3)
+        ax3.set_title("Average Audio Features by Playlist")
+        ax3.set_ylabel("Value")
+        ax3.set_xticklabels(avg_df_plot.index, rotation=0)
+        st.pyplot(fig_bar)
 
-for playlist in avg_df.index:
-    values = avg_df.loc[playlist].tolist()
-    values += values[:1]
-    ax.plot(angles, values, label=playlist)
-    ax.fill(angles, values, alpha=0.1)
+    # ☁️ Word Clouds
+    st.subheader("☁️ Artist & Genre Word Clouds")
 
-ax.set_xticks(angles[:-1])
-ax.set_xticklabels(labels)
-ax.set_title("Playlist Audio Profiles")
-ax.legend(loc="upper right", bbox_to_anchor=(1.3, 1.1))
-st.pyplot(fig)
+    if "Artist Name(s)" in df.columns and df["Artist Name(s)"].notna().sum() > 0:
+        artist_text = " ".join(df["Artist Name(s)"].dropna().astype(str).tolist())
+        artist_wc = WordCloud(width=800, height=400, background_color="white").generate(artist_text)
+        st.markdown("### 🎤 Most Frequent Artists")
+        st.image(artist_wc.to_array(), use_container_width=True)
+    else:
+        st.warning("No artist data found to generate word cloud.")
 
-# 🎨 Mood Scatter Plot
-st.subheader("🎨 Mood Map: Energy vs Valence")
-
-fig2, ax2 = plt.subplots()
-for playlist in selected:
-    pl_df = df[df["Playlist"] == playlist]
-    ax2.scatter(pl_df["Energy"], pl_df["Valence"], alpha=0.4, label=playlist)
-
-ax2.set_xlabel("Energy")
-ax2.set_ylabel("Valence")
-ax2.set_title("Mood Distribution by Playlist")
-ax2.legend()
-st.pyplot(fig2)
-
-# 📶 Bar Chart: Average Features Per Playlist
-st.subheader("📊 Average Features Per Playlist")
-
-st.dataframe(avg_df.round(3).transpose())
-avg_df_plot = avg_df.transpose()
-
-fig3, ax3 = plt.subplots(figsize=(10, 5))
-avg_df_plot.plot(kind="bar", ax=ax3)
-ax3.set_title("Average Audio Features by Playlist")
-ax3.set_ylabel("Value")
-ax3.set_xticklabels(avg_df_plot.index, rotation=0)
-st.pyplot(fig3)
-
-
-from wordcloud import WordCloud
-
-# --- WORD CLOUDS: Artist + Genre ---
-st.subheader("☁️ Artist & Genre Word Clouds")
-
-if 'df' in locals() and "Artist Name(s)" in df.columns and df["Artist Name(s)"].notna().sum() > 0:
-    artist_text = " ".join(df["Artist Name(s)"].dropna().astype(str).tolist())
-    artist_wc = WordCloud(width=800, height=400, background_color="white").generate(artist_text)
-
-    st.markdown("### 🎤 Most Frequent Artists")
-    st.image(artist_wc.to_array(), use_container_width=True)
-else:
-    st.warning("No artist data found to generate word cloud.")
-
-if 'df' in locals() and "Genres" in df.columns and df["Genres"].notna().sum() > 0:
-    genre_text = " ".join(df["Genres"].dropna().astype(str).tolist())
-    genre_wc = WordCloud(width=800, height=400, background_color="white").generate(genre_text)
-
-    st.markdown("### 🎼 Most Common Genres")
-    st.image(genre_wc.to_array(), use_container_width=True)
-else:
-    st.warning("No genre data found to generate word cloud.")
-
-
+    if "Genres" in df.columns and df["Genres"].notna().sum() > 0:
+        genre_text = " ".join(df["Genres"].dropna().astype(str).tolist())
+        genre_wc = WordCloud(width=800, height=400, background_color="white").generate(genre_text)
+        st.markdown("### 🎼 Most Common Genres")
+        st.image(genre_wc.to_array(), use_container_width=True)
+    else:
+        st.warning("No genre data found to generate word cloud.")
