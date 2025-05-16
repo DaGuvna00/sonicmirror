@@ -53,7 +53,7 @@ else:
     # --- If selected and button clicked ---
     if selected_names and st.button("Analyze Selected Playlists"):
         st.write("🎯 Analyze button clicked")
-            all_tracks = []
+        all_tracks = []
         st.write("📦 Tracks found:", len(all_tracks))
 
         for name in selected_names:
