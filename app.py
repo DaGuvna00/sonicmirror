@@ -60,7 +60,7 @@ if uploaded_files:
 
         with st.spinner("Analyzing your vibe..."):
             response = requests.post(
-                "https://api-inference.huggingface.co/models/bigscience/bloomz-560m",
+                "https://api-inference.huggingface.co/models/gpt2",
                 headers={"Authorization": f"Bearer {st.secrets['HF_TOKEN']}"},
                 json={"inputs": summary_prompt}
             )
