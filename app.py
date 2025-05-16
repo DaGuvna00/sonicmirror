@@ -71,7 +71,7 @@ else:
                     })
 
         # ---- Batching for Audio Features (max 100 per request) ----
-   def get_audio_features_in_batches(track_ids):
+def get_audio_features_in_batches(track_ids):
     audio_features = []
     for i in range(0, len(track_ids), 100):
         batch = track_ids[i:i+100]
@@ -81,6 +81,7 @@ else:
         except Exception as e:
             st.error(f"⚠️ Error fetching batch {i//100+1}: {e}")
     return audio_features
+
 
 
 
