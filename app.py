@@ -52,7 +52,9 @@ else:
 
     # --- If selected and button clicked ---
     if selected_names and st.button("Analyze Selected Playlists"):
-        all_tracks = []
+        st.write("🎯 Analyze button clicked")
+            all_tracks = []
+        st.write("📦 Tracks found:", len(all_tracks))
 
         for name in selected_names:
             playlist_id = playlist_map[name]
@@ -92,6 +94,8 @@ def get_audio_features_in_batches(track_ids):
             all_tracks[i].update(features)
 
     df = pd.DataFrame(all_tracks)
+        st.write("📊 Final DataFrame rows:", df.shape[0])
+
     st.write("📊 DataFrame shape:", df.shape)
 
     st.dataframe(df[["playlist", "name", "artists", "energy", "valence", "danceability", "tempo"]])
