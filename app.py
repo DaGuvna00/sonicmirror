@@ -200,3 +200,38 @@ if uploaded_files:
         st.image(genre_wc.to_array(), use_container_width=True)
     else:
         st.warning("No genre data found to generate word cloud.")
+        # 🧠 Playlist Personality Summary (AI-Generated)
+st.subheader("🧠 Playlist Personality Summary")
+
+if "Valence" in df.columns and "Energy" in df.columns:
+    # Create summary text to send
+    average_vals = df[["Valence", "Energy", "Danceability", "Acousticness", "Tempo"]].mean().round(2)
+    summary_prompt = f"""
+    Based on the following average Spotify audio features:
+    
+    - Valence (happiness): {average_vals['Valence']}
+    - Energy: {average_vals['Energy']}
+    - Danceability: {average_vals['Danceability']}
+    - Acousticness: {average_vals['Acousticness']}
+    - Tempo: {average_vals['Tempo']}
+
+    Write a short, fun personality analysis of the user’s music taste.
+    """
+
+    with st.spinner("Analyzing playlist personality..."):
+        response = requests.post(
+            "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.1",
+            headers={"Authorization": f"Bearer {st.secrets['HF_TOKEN']}"},
+            json={"inputs": summary_prompt}
+        )
+
+        if response.status_code == 200:
+            result = response.json()
+            personality_summary = result[0]["generated_text"]
+            st.success("Here's what the AI thinks of your vibe:")
+            st.markdown(f"> {personality_summary}")
+        else:
+            st.error("Something went wrong generating your summary. Try again later.")
+else:
+    st.warning("Missing necessary audio features to generate a personality summary.")
+
