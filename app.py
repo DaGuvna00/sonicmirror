@@ -192,7 +192,7 @@ if uploaded_files:
 
 st.subheader("🧪 Hugging Face Test")
 
-    if st.button("Run GPT-2 Test"):
+if st.button("Run GPT-2 Test"):
     test_prompt = "Describe a playlist with high energy, low acousticness and high danceability."
 
     response = requests.post(
@@ -209,3 +209,4 @@ st.subheader("🧪 Hugging Face Test")
         st.write(result[0]["generated_text"])
     else:
         st.error(f"❌ API Error {response.status_code}: {response.text}")
+
