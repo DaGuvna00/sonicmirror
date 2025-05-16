@@ -56,7 +56,7 @@ else:
         all_tracks = []
         st.write("📦 Tracks found:", len(all_tracks))
 
-   for name in selected_names:
+for name in selected_names:
     playlist_id = playlist_map[name]
     offset = 0
     while True:
