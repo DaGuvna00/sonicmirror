@@ -3,6 +3,12 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from wordcloud import WordCloud
+import requests
+
+headers = {
+    "Authorization": f"Bearer {st.secrets['HF_TOKEN']}"
+}
+
 
 st.set_page_config(page_title="SonicMirror - Playlist Analyzer", layout="wide")
 st.title("🎶 SonicMirror – Upload Your Spotify Playlists")
