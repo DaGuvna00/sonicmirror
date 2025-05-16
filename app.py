@@ -62,60 +62,38 @@ if uploaded_files:
     ax2.set_ylabel("Track Count")
     st.pyplot(fig2)
 
-   # 📅 Time Between Track Release and When You Added It
-st.subheader("📅 Time Between Track Release and When You Added It")
-
-# Convert date columns
-df["Release Date"] = pd.to_datetime(df["Release Date"], errors="coerce")
-df["Date Added"] = pd.to_datetime(df["Added At"], errors="coerce")
-
-# Drop rows with missing dates
-df = df.dropna(subset=["Release Date", "Date Added"])
-
-# Calculate time difference
-df["Days Until Added"] = (df["Date Added"] - df["Release Date"]).dt.days
-
-# Plot
-fig, ax = plt.subplots()
-df["Days Until Added"].dropna().hist(bins=30, ax=ax, color="skyblue", edgecolor="black")
-ax.set_title("Time Between Track Release and When You Added It")
-ax.set_xlabel("Days Between Release and Add")
-ax.set_ylabel("Number of Tracks")
-st.pyplot(fig)
-
-
     # 🎤 Top Artists
-st.subheader("🎤 Top 10 Artists")
-top_artists = df["Artist Name(s)"].value_counts().nlargest(10)
-fig3, ax3 = plt.subplots()
-top_artists.plot(kind="barh", ax=ax3)
-ax3.set_title("Most Frequent Artists")
-ax3.invert_yaxis()
-st.pyplot(fig3)
+    st.subheader("🎤 Top 10 Artists")
+    top_artists = df["Artist Name(s)"].value_counts().nlargest(10)
+    fig3, ax3 = plt.subplots()
+    top_artists.plot(kind="barh", ax=ax3)
+    ax3.set_title("Most Frequent Artists")
+    ax3.invert_yaxis()
+    st.pyplot(fig3)
 
     # 🕸 Radar Chart of Audio Features
-st.subheader("🕸 Audio Feature Profile")
-radar_labels = ["Energy", "Valence", "Danceability", "Acousticness", "Instrumentalness", "Liveness"]
-radar_values = df[radar_labels].mean().tolist()
-angles = np.linspace(0, 2 * np.pi, len(radar_labels), endpoint=False).tolist()
-radar_values += radar_values[:1]
-angles += angles[:1]
-fig4, ax4 = plt.subplots(subplot_kw={"polar": True})
-ax4.plot(angles, radar_values, "o-", linewidth=2)
-ax4.fill(angles, radar_values, alpha=0.25)
-ax4.set_xticks(angles[:-1])
-ax4.set_xticklabels(radar_labels)
-ax4.set_title("Average Audio Profile")
-st.pyplot(fig4)
+    st.subheader("🕸 Audio Feature Profile")
+    radar_labels = ["Energy", "Valence", "Danceability", "Acousticness", "Instrumentalness", "Liveness"]
+    radar_values = df[radar_labels].mean().tolist()
+    angles = np.linspace(0, 2 * np.pi, len(radar_labels), endpoint=False).tolist()
+    radar_values += radar_values[:1]
+    angles += angles[:1]
+    fig4, ax4 = plt.subplots(subplot_kw={"polar": True})
+    ax4.plot(angles, radar_values, "o-", linewidth=2)
+    ax4.fill(angles, radar_values, alpha=0.25)
+    ax4.set_xticks(angles[:-1])
+    ax4.set_xticklabels(radar_labels)
+    ax4.set_title("Average Audio Profile")
+    st.pyplot(fig4)
 
     # ⚖️ Speechiness vs Instrumentalness
-st.subheader("⚖️ Speechiness vs Instrumentalness")
-fig5, ax5 = plt.subplots()
-ax5.scatter(df["Speechiness"], df["Instrumentalness"], alpha=0.5)
-ax5.set_xlabel("Speechiness")
-ax5.set_ylabel("Instrumentalness")
-ax5.set_title("Vocals vs Instrumental")
-st.pyplot(fig5)
+    st.subheader("⚖️ Speechiness vs Instrumentalness")
+    fig5, ax5 = plt.subplots()
+    ax5.scatter(df["Speechiness"], df["Instrumentalness"], alpha=0.5)
+    ax5.set_xlabel("Speechiness")
+    ax5.set_ylabel("Instrumentalness")
+    ax5.set_title("Vocals vs Instrumental")
+    st.pyplot(fig5)
 
     # 🎵 Tempo Distribution
     st.subheader("🎵 Tempo Distribution")
@@ -216,50 +194,3 @@ st.pyplot(fig5)
         st.image(genre_wc.to_array(), use_container_width=True)
     else:
         st.warning("No genre data found to generate word cloud.")
-
-st.subheader("🧠 Playlist Personality Summary")
-
-# Features for mood insight
-summary_features = ["Valence", "Energy", "Danceability", "Acousticness", "Speechiness", "Tempo"]
-personality = df[summary_features].mean()
-
-def interpret_personality(p):
-    traits = []
-
-    if p["Valence"] > 0.6:
-        traits.append("😊 Positive")
-    elif p["Valence"] < 0.4:
-        traits.append("😔 Moody")
-
-    if p["Energy"] > 0.7:
-        traits.append("⚡ High Energy")
-    elif p["Energy"] < 0.4:
-        traits.append("🧘 Calm")
-
-    if p["Danceability"] > 0.7:
-        traits.append("💃 Danceable")
-    elif p["Danceability"] < 0.4:
-        traits.append("🪑 Chill")
-
-    if p["Acousticness"] > 0.5:
-        traits.append("🌿 Organic")
-    else:
-        traits.append("🎛 Electronic")
-
-    if p["Speechiness"] > 0.33:
-        traits.append("🗣 Spoken or Rap-heavy")
-
-    if p["Tempo"] > 120:
-        traits.append("🏃 Fast-paced")
-    elif p["Tempo"] < 90:
-        traits.append("🚶 Slow & Steady")
-
-    return traits
-
-traits = interpret_personality(personality)
-
-st.markdown("### 🪞 This Playlist Feels Like:")
-st.markdown("**" + ", ".join(traits) + "**")
-
-# Optional: add emoji summary radar or text bar
-st.markdown("> _Based on your playlist’s audio features._")
