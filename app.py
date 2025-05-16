@@ -31,4 +31,3 @@ except:
     st.warning("🔐 Please log in to Spotify using the link below:")
     auth_url = auth_manager.get_authorize_url()
     st.markdown(f"[Click here to log in with Spotify]({auth_url})")
-
