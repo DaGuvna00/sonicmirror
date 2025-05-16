@@ -87,7 +87,7 @@ def get_audio_features_in_batches(track_ids):
     audio_features = get_audio_features_in_batches(track_ids)
 
         # ---- Merge features with track info ----
-        for i, features in enumerate(audio_features):
+            for i, features in enumerate(audio_features):
             if features:
                 all_tracks[i].update(features)
 
