@@ -84,19 +84,17 @@ def get_audio_features_in_batches(track_ids):
 
     track_ids = [t["id"] for t in all_tracks if t["id"]]  # Filter out missing/null track IDs
 
-    audio_features = get_audio_features_in_batches(track_ids)
+audio_features = get_audio_features_in_batches(track_ids)
+st.write("✅ Got audio features for", len(track_ids), "tracks.")
 
-        # ---- Merge features with track info ----
-    for i, features in enumerate(audio_features):
-            if features:
-                all_tracks[i].update(features)
+for i, features in enumerate(audio_features):
+    if features:
+        all_tracks[i].update(features)
 
-    df = pd.DataFrame(all_tracks)
-    st.success(f"🎉 Loaded {len(df)} tracks from {len(selected_names)} playlist(s).")
+df = pd.DataFrame(all_tracks)
+st.write("📊 DataFrame shape:", df.shape)
 
-        # ---- Preview the Data ----
-    st.dataframe(df[["playlist", "name", "artists", "energy", "valence", "danceability", "tempo"]])
+st.dataframe(df[["playlist", "name", "artists", "energy", "valence", "danceability", "tempo"]])
+st.session_state.df = df
 
-        # ---- Store for future charts ----
-    st.session_state.df = df
 
