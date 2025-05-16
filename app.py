@@ -46,3 +46,4 @@ else:
     playlists = sp.current_user_playlists()
     for playlist in playlists['items']:
         st.markdown(f"- **{playlist['name']}** ({playlist['tracks']['total']} tracks)")
+
