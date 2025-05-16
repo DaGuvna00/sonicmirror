@@ -16,15 +16,20 @@ auth_manager = SpotifyOAuth(
 )
 
 # --- Connect to Spotify ---
+sp = None
 try:
     sp = spotipy.Spotify(auth_manager=auth_manager)
     user = sp.current_user()
     st.success(f"✅ Logged in as: {user['display_name']}")
 except Exception as e:
-    auth_url = auth_manager.get_authorize_url()
-    st.warning("🔐 Please log in with Spotify to continue:")
-    st.markdown(f"[Click here to log in with Spotify]({auth_url})")
+    st.warning("🔐 Not logged in or token expired.")
+    try:
+        auth_url = auth_manager.get_authorize_url()
+        st.markdown(f"[Click here to log in with Spotify]({auth_url})")
+    except Exception as inner:
+        st.error(f"Error creating login link: {inner}")
     st.stop()
+
 
 # --- Playlist Selection ---
 playlists = sp.current_user_playlists()["items"]
