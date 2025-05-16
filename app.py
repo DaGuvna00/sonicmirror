@@ -60,8 +60,8 @@ else:
         playlist_id = playlist_map[name]
         offset = 0
         while True:
-        results = sp.playlist_tracks(playlist_id, offset=offset, limit=100)
-        tracks = results['items']
+            results = sp.playlist_tracks(playlist_id, offset=offset, limit=100)
+            tracks = results['items']
         if not tracks:
             break
 
