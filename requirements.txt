@@ -4,3 +4,5 @@ matplotlib
 seaborn
 spotipy
 wordcloud
+openai==1.25.1
+pip install transformers
