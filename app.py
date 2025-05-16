@@ -127,56 +127,61 @@ if uploaded_files:
         ax8.set_ylabel("Track Count")
         st.pyplot(fig8)
 
-if 'df' in locals() and "Playlist" in df.columns:
-    st.subheader("📊 Compare Playlists Side-by-Side")
+# 🎯 Calculate average metrics per playlist
+features = ["Energy", "Valence", "Danceability", "Acousticness", "Instrumentalness", "Liveness"]
+avg_df = df[df["Playlist"].isin(selected)].groupby("Playlist")[features].mean()
 
-    playlist_names = df["Playlist"].unique()
-    selected = st.multiselect("Choose playlists to compare", playlist_names, default=list(playlist_names))
+# 📊 Radar Chart Comparison
+st.subheader("🕸 Audio Feature Comparison (Radar)")
 
-    if selected:
-        for playlist in selected:
-            st.markdown(f"### 🎼 {playlist}")
-            pl_df = df[df["Playlist"] == playlist]
+import numpy as np
+import matplotlib.pyplot as plt
 
-            # Audio Feature Summary
-            features = ["Energy", "Valence", "Danceability", "Acousticness", "Instrumentalness", "Liveness"]
-            avg_metrics = pl_df[features].mean().round(3)
-            st.dataframe(avg_metrics.rename("Average").to_frame())
+labels = features
+angles = np.linspace(0, 2 * np.pi, len(labels), endpoint=False).tolist()
+angles += angles[:1]
 
-            # Radar Chart
-            import numpy as np
-            import matplotlib.pyplot as plt
-            values = avg_metrics.tolist()
-            labels = features
-            angles = np.linspace(0, 2 * np.pi, len(labels), endpoint=False).tolist()
-            values += values[:1]
-            angles += angles[:1]
+fig, ax = plt.subplots(subplot_kw={"polar": True}, figsize=(6, 6))
 
-            fig, ax = plt.subplots(subplot_kw={"polar": True})
-            ax.plot(angles, values, "o-", linewidth=2)
-            ax.fill(angles, values, alpha=0.25)
-            ax.set_xticks(angles[:-1])
-            ax.set_xticklabels(labels)
-            ax.set_title(f"{playlist} – Audio Profile")
-            st.pyplot(fig)
+for playlist in avg_df.index:
+    values = avg_df.loc[playlist].tolist()
+    values += values[:1]
+    ax.plot(angles, values, label=playlist)
+    ax.fill(angles, values, alpha=0.1)
 
-            # Mood Scatter Plot
-            if "Energy" in pl_df.columns and "Valence" in pl_df.columns:
-                fig2, ax2 = plt.subplots()
-                ax2.scatter(pl_df["Energy"], pl_df["Valence"], alpha=0.4)
-                ax2.set_xlabel("Energy")
-                ax2.set_ylabel("Valence")
-                ax2.set_title(f"{playlist} – Mood Map")
-                st.pyplot(fig2)
+ax.set_xticks(angles[:-1])
+ax.set_xticklabels(labels)
+ax.set_title("Playlist Audio Profiles")
+ax.legend(loc="upper right", bbox_to_anchor=(1.3, 1.1))
+st.pyplot(fig)
 
-            # Top Artists
-            if "Artist Name(s)" in pl_df.columns:
-                st.markdown(f"**Top Artists in {playlist}:**")
-                top_artists = pl_df["Artist Name(s)"].value_counts().nlargest(5)
-                st.bar_chart(top_artists)
+# 🎨 Mood Scatter Plot
+st.subheader("🎨 Mood Map: Energy vs Valence")
 
-    else:
-        st.info("☝️ Select one or more playlists above to compare.")
+fig2, ax2 = plt.subplots()
+for playlist in selected:
+    pl_df = df[df["Playlist"] == playlist]
+    ax2.scatter(pl_df["Energy"], pl_df["Valence"], alpha=0.4, label=playlist)
+
+ax2.set_xlabel("Energy")
+ax2.set_ylabel("Valence")
+ax2.set_title("Mood Distribution by Playlist")
+ax2.legend()
+st.pyplot(fig2)
+
+# 📶 Bar Chart: Average Features Per Playlist
+st.subheader("📊 Average Features Per Playlist")
+
+st.dataframe(avg_df.round(3).transpose())
+avg_df_plot = avg_df.transpose()
+
+fig3, ax3 = plt.subplots(figsize=(10, 5))
+avg_df_plot.plot(kind="bar", ax=ax3)
+ax3.set_title("Average Audio Features by Playlist")
+ax3.set_ylabel("Value")
+ax3.set_xticklabels(avg_df_plot.index, rotation=0)
+st.pyplot(fig3)
+
 
 from wordcloud import WordCloud
 
