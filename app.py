@@ -86,12 +86,12 @@ st.pyplot(fig)
 
     # 🎤 Top Artists
 st.subheader("🎤 Top 10 Artists")
-    top_artists = df["Artist Name(s)"].value_counts().nlargest(10)
-    fig3, ax3 = plt.subplots()
-    top_artists.plot(kind="barh", ax=ax3)
-    ax3.set_title("Most Frequent Artists")
-    ax3.invert_yaxis()
-    st.pyplot(fig3)
+top_artists = df["Artist Name(s)"].value_counts().nlargest(10)
+fig3, ax3 = plt.subplots()
+top_artists.plot(kind="barh", ax=ax3)
+ax3.set_title("Most Frequent Artists")
+ax3.invert_yaxis()
+st.pyplot(fig3)
 
     # 🕸 Radar Chart of Audio Features
     st.subheader("🕸 Audio Feature Profile")
