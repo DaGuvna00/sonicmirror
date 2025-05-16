@@ -39,3 +39,10 @@ except Exception as e:
         st.error(f"Critical Error: {inner}")
 
     st.error(f"Error: {e}")
+try:
+    user = sp.current_user()
+    st.success(f"✅ Logged in as: {user['display_name']}")
+except:
+    st.warning("🔐 You need to log in with Spotify first.")
+    auth_url = auth_manager.get_authorize_url()
+    st.markdown(f"[Click here to log in with Spotify]({auth_url})")
