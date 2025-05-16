@@ -194,3 +194,50 @@ if uploaded_files:
         st.image(genre_wc.to_array(), use_container_width=True)
     else:
         st.warning("No genre data found to generate word cloud.")
+
+st.subheader("🧠 Playlist Personality Summary")
+
+# Features for mood insight
+summary_features = ["Valence", "Energy", "Danceability", "Acousticness", "Speechiness", "Tempo"]
+personality = df[summary_features].mean()
+
+def interpret_personality(p):
+    traits = []
+
+    if p["Valence"] > 0.6:
+        traits.append("😊 Positive")
+    elif p["Valence"] < 0.4:
+        traits.append("😔 Moody")
+
+    if p["Energy"] > 0.7:
+        traits.append("⚡ High Energy")
+    elif p["Energy"] < 0.4:
+        traits.append("🧘 Calm")
+
+    if p["Danceability"] > 0.7:
+        traits.append("💃 Danceable")
+    elif p["Danceability"] < 0.4:
+        traits.append("🪑 Chill")
+
+    if p["Acousticness"] > 0.5:
+        traits.append("🌿 Organic")
+    else:
+        traits.append("🎛 Electronic")
+
+    if p["Speechiness"] > 0.33:
+        traits.append("🗣 Spoken or Rap-heavy")
+
+    if p["Tempo"] > 120:
+        traits.append("🏃 Fast-paced")
+    elif p["Tempo"] < 90:
+        traits.append("🚶 Slow & Steady")
+
+    return traits
+
+traits = interpret_personality(personality)
+
+st.markdown("### 🪞 This Playlist Feels Like:")
+st.markdown("**" + ", ".join(traits) + "**")
+
+# Optional: add emoji summary radar or text bar
+st.markdown("> _Based on your playlist’s audio features._")
