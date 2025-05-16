@@ -72,13 +72,19 @@ else:
 
         # ---- Batching for Audio Features (max 100 per request) ----
         def get_audio_features_in_batches(track_ids):
-            audio_features = []
-            for i in range(0, len(track_ids), 100):
-                batch = track_ids[i:i+100]
-                audio_features.extend(sp.audio_features(batch))
-            return audio_features
+    audio_features = []
+    for i in range(0, len(track_ids), 100):
+        batch = track_ids[i:i+100]
+        try:
+            features = sp.audio_features(batch)
+            audio_features.extend(features)
+        except Exception as e:
+            st.error(f"⚠️ Error fetching batch {i//100+1}: {e}")
+    return audio_features
 
-        track_ids = [t["id"] for t in all_tracks]
+
+        track_ids = [t["id"] for t in all_tracks if t["id"]]  # Filter out missing/null track IDs
+
         audio_features = get_audio_features_in_batches(track_ids)
 
         # ---- Merge features with track info ----
