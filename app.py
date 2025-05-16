@@ -189,3 +189,12 @@ if uploaded_files:
         st.image(genre_wc.to_array(), use_container_width=True)
     else:
         st.warning("No genre data found to generate word cloud.")
+
+    import requests
+    response = requests.post(
+    "https://api-inference.huggingface.co/models/gpt2",
+    headers={"Authorization": f"Bearer YOUR_TOKEN_HERE"},
+    json={"inputs": "Describe a playlist with high energy, low acousticness and high danceability."}
+)
+    print(response.status_code)
+    print(response.json())
