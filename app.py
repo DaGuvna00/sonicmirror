@@ -150,6 +150,5 @@ if "Genres" in df.columns and df["Genres"].notna().sum() > 0:
 else:
     st.warning("No genre data found to generate word cloud.")
 
-else:
-    st.info("📁 Upload a playlist file to get started.")
+
 
