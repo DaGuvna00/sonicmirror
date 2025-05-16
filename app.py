@@ -4,6 +4,7 @@ from spotipy.oauth2 import SpotifyOAuth
 
 st.set_page_config(page_title="SonicMirror", layout="wide")
 st.title("🎶 SonicMirror – Spotify Playlist Analyzer")
+st.write("👀 Reached this point in the app...")
 
 # Set up Spotify OAuth
 auth_manager = SpotifyOAuth(
