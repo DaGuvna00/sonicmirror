@@ -56,21 +56,28 @@ else:
         all_tracks = []
         st.write("📦 Tracks found:", len(all_tracks))
 
-        for name in selected_names:
-            playlist_id = playlist_map[name]
-            results = sp.playlist_tracks(playlist_id)
-            tracks = results['items']
+       for name in selected_names:
+    playlist_id = playlist_map[name]
+    offset = 0
+    while True:
+        results = sp.playlist_tracks(playlist_id, offset=offset, limit=100)
+        tracks = results['items']
+        if not tracks:
+            break
 
-            for item in tracks:
-                track = item['track']
-                if track and track["id"]:  # Ensure no nulls
-                    all_tracks.append({
-                        "playlist": name,
-                        "name": track["name"],
-                        "id": track["id"],
-                        "artists": ", ".join([a["name"] for a in track["artists"]]),
-                        "album": track["album"]["name"]
-                    })
+        for item in tracks:
+            track = item['track']
+            if track and track["id"]:
+                all_tracks.append({
+                    "playlist": name,
+                    "name": track["name"],
+                    "id": track["id"],
+                    "artists": ", ".join([a["name"] for a in track["artists"]]),
+                    "album": track["album"]["name"]
+                })
+
+        offset += 100
+
 
         # ---- Batching for Audio Features (max 100 per request) ----
 def get_audio_features_in_batches(track_ids):
