@@ -94,7 +94,7 @@ def get_audio_features_in_batches(track_ids):
             all_tracks[i].update(features)
 
     df = pd.DataFrame(all_tracks)
-        st.write("📊 Final DataFrame rows:", df.shape[0])
+    st.write("📊 Final DataFrame rows:", df.shape[0])
 
     st.write("📊 DataFrame shape:", df.shape)
 
