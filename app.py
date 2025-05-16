@@ -18,14 +18,23 @@ if "access_token" not in st.session_state:
         scope="playlist-read-private playlist-read-collaborative"
     )
     auth_url = auth_manager.get_authorize_url()
-    st.markdown(f"[Click here to log in with Spotify]({auth_url})")
+query_params = st.experimental_get_query_params()
+code = query_params.get("code", [None])[0]
 
-    query_params = st.experimental_get_query_params()
-    if "code" in query_params:
-        code = query_params["code"][0]
-        token_info = auth_manager.get_access_token(code, as_dict=False)
-        st.session_state["access_token"] = token_info["access_token"]
-        st.experimental_rerun()
+if code:
+    try:
+        token_info = auth_manager.get_access_token(code)
+        if token_info and "access_token" in token_info:
+            st.session_state["access_token"] = token_info["access_token"]
+            st.success("✅ Successfully authenticated!")
+        else:
+            st.error("❌ Failed to retrieve access token.")
+    except Exception as e:
+        st.error(f"Error during token retrieval: {e}")
+else:
+    st.markdown(f"[Click here to log in with Spotify]({auth_url})")
+    st.stop()
+
 else:
     # Logged in
     sp = spotipy.Spotify(auth=st.session_state.access_token)
