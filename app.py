@@ -84,17 +84,17 @@ def get_audio_features_in_batches(track_ids):
 
     track_ids = [t["id"] for t in all_tracks if t["id"]]  # Filter out missing/null track IDs
 
-audio_features = get_audio_features_in_batches(track_ids)
-st.write("✅ Got audio features for", len(track_ids), "tracks.")
+    audio_features = get_audio_features_in_batches(track_ids)
+    st.write("✅ Got audio features for", len(track_ids), "tracks.")
 
-for i, features in enumerate(audio_features):
-    if features:
-        all_tracks[i].update(features)
+    for i, features in enumerate(audio_features):
+        if features:
+            all_tracks[i].update(features)
 
-df = pd.DataFrame(all_tracks)
-st.write("📊 DataFrame shape:", df.shape)
+    df = pd.DataFrame(all_tracks)
+    st.write("📊 DataFrame shape:", df.shape)
 
-st.dataframe(df[["playlist", "name", "artists", "energy", "valence", "danceability", "tempo"]])
-st.session_state.df = df
+    st.dataframe(df[["playlist", "name", "artists", "energy", "valence", "danceability", "tempo"]])
+    st.session_state.df = df
 
 
