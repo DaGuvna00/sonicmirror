@@ -6,12 +6,7 @@ from spotipy.cache_handler import CacheHandler
 st.set_page_config(page_title="SonicMirror", layout="wide")
 st.title("🎶 SonicMirror – Spotify Playlist Analyzer")
 
-# ✅ Automatically rerun the app if redirected from Spotify
-if "code" in st.query_params and "reran" not in st.session_state:
-    st.session_state.reran = True
-    st.rerun()
-
-# Setup in-memory token cache
+# Setup token cache
 if "token_info" not in st.session_state:
     st.session_state.token_info = None
 
@@ -22,7 +17,7 @@ class StreamlitTokenCache(CacheHandler):
     def save_token_to_cache(self, token_info):
         st.session_state.token_info = token_info
 
-# Spotify auth
+# Auth manager
 auth_manager = SpotifyOAuth(
     client_id=st.secrets["SPOTIPY_CLIENT_ID"],
     client_secret=st.secrets["SPOTIPY_CLIENT_SECRET"],
@@ -31,13 +26,24 @@ auth_manager = SpotifyOAuth(
     cache_handler=StreamlitTokenCache()
 )
 
-# If not logged in, show login link
-if not auth_manager.get_cached_token():
+# ✅ If redirected from Spotify with ?code=, process it manually
+query_params = st.query_params
+if "code" in query_params and st.session_state.token_info is None:
+    code = query_params["code"]
+    token_info = auth_manager.get_access_token(code, as_dict=True)
+    st.session_state.token_info = token_info
+    st.success("🎉 Spotify login completed! You can now use the app.")
+    st.rerun()
+
+# 🔐 If not logged in yet
+if st.session_state.token_info is None:
     auth_url = auth_manager.get_authorize_url()
     st.warning("🔐 Please log in with Spotify to continue:")
     st.markdown(f"[Click here to log in with Spotify]({auth_url})")
+
 else:
-    sp = spotipy.Spotify(auth_manager=auth_manager)
+    # 🎧 Ready to go
+    sp = spotipy.Spotify(auth=st.session_state.token_info['access_token'])
     user = sp.current_user()
     st.success(f"✅ Logged in as: {user['display_name']}")
 
