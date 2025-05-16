@@ -109,13 +109,13 @@ ax4.set_title("Average Audio Profile")
 st.pyplot(fig4)
 
     # ⚖️ Speechiness vs Instrumentalness
-    st.subheader("⚖️ Speechiness vs Instrumentalness")
-    fig5, ax5 = plt.subplots()
-    ax5.scatter(df["Speechiness"], df["Instrumentalness"], alpha=0.5)
-    ax5.set_xlabel("Speechiness")
-    ax5.set_ylabel("Instrumentalness")
-    ax5.set_title("Vocals vs Instrumental")
-    st.pyplot(fig5)
+st.subheader("⚖️ Speechiness vs Instrumentalness")
+fig5, ax5 = plt.subplots()
+ax5.scatter(df["Speechiness"], df["Instrumentalness"], alpha=0.5)
+ax5.set_xlabel("Speechiness")
+ax5.set_ylabel("Instrumentalness")
+ax5.set_title("Vocals vs Instrumental")
+st.pyplot(fig5)
 
     # 🎵 Tempo Distribution
     st.subheader("🎵 Tempo Distribution")
