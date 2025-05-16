@@ -95,8 +95,8 @@ def get_audio_features_in_batches(track_ids):
     st.success(f"🎉 Loaded {len(df)} tracks from {len(selected_names)} playlist(s).")
 
         # ---- Preview the Data ----
-        st.dataframe(df[["playlist", "name", "artists", "energy", "valence", "danceability", "tempo"]])
+    st.dataframe(df[["playlist", "name", "artists", "energy", "valence", "danceability", "tempo"]])
 
         # ---- Store for future charts ----
-        st.session_state.df = df
+    st.session_state.df = df
 
