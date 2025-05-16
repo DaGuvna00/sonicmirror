@@ -32,5 +32,15 @@ if not auth_manager.get_cached_token():
     auth_url = auth_manager.get_authorize_url()
     st.warning("🔐 Please log in with Spotify to continue:")
     st.markdown(f"[Click here to log in with Spotify]({auth_url})")
-else
+else:
+    sp = spotipy.Spotify(auth_manager=auth_manager)
+    user = sp.current_user()
+    st.success(f"✅ Logged in as: {user['display_name']}")
 
+    # Show playlists
+    st.subheader("🎵 Your Spotify Playlists")
+    playlists = sp.current_user_playlists()
+    for playlist in playlists['items']:
+        name = playlist['name']
+        total = playlist['tracks']['total']
+        st.markdown(f"- **{name}** ({total} tracks)")
