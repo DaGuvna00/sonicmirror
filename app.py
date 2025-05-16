@@ -76,7 +76,7 @@ else:
                     "album": track["album"]["name"]
                 })
 
-        offset += 100
+    offset += 100
 
 
         # ---- Batching for Audio Features (max 100 per request) ----
