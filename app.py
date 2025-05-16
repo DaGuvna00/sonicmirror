@@ -126,6 +126,58 @@ if uploaded_files:
         ax8.set_xlabel("Key")
         ax8.set_ylabel("Track Count")
         st.pyplot(fig8)
+
+if 'df' in locals() and "Playlist" in df.columns:
+    st.subheader("📊 Compare Playlists Side-by-Side")
+
+    playlist_names = df["Playlist"].unique()
+    selected = st.multiselect("Choose playlists to compare", playlist_names, default=list(playlist_names))
+
+    if selected:
+        for playlist in selected:
+            st.markdown(f"### 🎼 {playlist}")
+            pl_df = df[df["Playlist"] == playlist]
+
+            # Audio Feature Summary
+            features = ["Energy", "Valence", "Danceability", "Acousticness", "Instrumentalness", "Liveness"]
+            avg_metrics = pl_df[features].mean().round(3)
+            st.dataframe(avg_metrics.rename("Average").to_frame())
+
+            # Radar Chart
+            import numpy as np
+            import matplotlib.pyplot as plt
+            values = avg_metrics.tolist()
+            labels = features
+            angles = np.linspace(0, 2 * np.pi, len(labels), endpoint=False).tolist()
+            values += values[:1]
+            angles += angles[:1]
+
+            fig, ax = plt.subplots(subplot_kw={"polar": True})
+            ax.plot(angles, values, "o-", linewidth=2)
+            ax.fill(angles, values, alpha=0.25)
+            ax.set_xticks(angles[:-1])
+            ax.set_xticklabels(labels)
+            ax.set_title(f"{playlist} – Audio Profile")
+            st.pyplot(fig)
+
+            # Mood Scatter Plot
+            if "Energy" in pl_df.columns and "Valence" in pl_df.columns:
+                fig2, ax2 = plt.subplots()
+                ax2.scatter(pl_df["Energy"], pl_df["Valence"], alpha=0.4)
+                ax2.set_xlabel("Energy")
+                ax2.set_ylabel("Valence")
+                ax2.set_title(f"{playlist} – Mood Map")
+                st.pyplot(fig2)
+
+            # Top Artists
+            if "Artist Name(s)" in pl_df.columns:
+                st.markdown(f"**Top Artists in {playlist}:**")
+                top_artists = pl_df["Artist Name(s)"].value_counts().nlargest(5)
+                st.bar_chart(top_artists)
+
+    else:
+        st.info("☝️ Select one or more playlists above to compare.")
+
 from wordcloud import WordCloud
 
 # --- WORD CLOUDS: Artist + Genre ---
