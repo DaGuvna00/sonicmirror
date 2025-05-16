@@ -129,21 +129,6 @@ if uploaded_files:
         ax8.set_ylabel("Track Count")
         st.pyplot(fig8)
 
-    # 📆 Time Between Track Release and Add Date
-    st.subheader("📆 Time Between Track Release and When You Added It")
-
-    df["Release Date"] = pd.to_datetime(df["Release Date"], errors="coerce")
-    df["Added At"] = pd.to_datetime(df["Added At"], errors="coerce")
-    df["Days Until Added"] = (df["Added At"] - df["Release Date"]).dt.days
-
-    fig_delay, ax_delay = plt.subplots()
-    df["Days Until Added"].dropna().plot(kind="hist", bins=30, ax=ax_delay, color="skyblue", edgecolor="black")
-    ax_delay.set_title("Time Between Track Release and When You Added It")
-    ax_delay.set_xlabel("Days Between Release and Add Date")
-    ax_delay.set_ylabel("Number of Tracks")
-    st.pyplot(fig_delay)
-
-
     # 🆚 Playlist Comparison (Radar + Bar + Mood Map)
     st.subheader("📊 Compare Playlists Side-by-Side")
     playlist_names = df["Playlist"].unique()
