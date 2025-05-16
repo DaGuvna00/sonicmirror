@@ -94,19 +94,19 @@ ax3.invert_yaxis()
 st.pyplot(fig3)
 
     # 🕸 Radar Chart of Audio Features
-    st.subheader("🕸 Audio Feature Profile")
-    radar_labels = ["Energy", "Valence", "Danceability", "Acousticness", "Instrumentalness", "Liveness"]
-    radar_values = df[radar_labels].mean().tolist()
-    angles = np.linspace(0, 2 * np.pi, len(radar_labels), endpoint=False).tolist()
-    radar_values += radar_values[:1]
-    angles += angles[:1]
-    fig4, ax4 = plt.subplots(subplot_kw={"polar": True})
-    ax4.plot(angles, radar_values, "o-", linewidth=2)
-    ax4.fill(angles, radar_values, alpha=0.25)
-    ax4.set_xticks(angles[:-1])
-    ax4.set_xticklabels(radar_labels)
-    ax4.set_title("Average Audio Profile")
-    st.pyplot(fig4)
+st.subheader("🕸 Audio Feature Profile")
+radar_labels = ["Energy", "Valence", "Danceability", "Acousticness", "Instrumentalness", "Liveness"]
+radar_values = df[radar_labels].mean().tolist()
+angles = np.linspace(0, 2 * np.pi, len(radar_labels), endpoint=False).tolist()
+radar_values += radar_values[:1]
+angles += angles[:1]
+fig4, ax4 = plt.subplots(subplot_kw={"polar": True})
+ax4.plot(angles, radar_values, "o-", linewidth=2)
+ax4.fill(angles, radar_values, alpha=0.25)
+ax4.set_xticks(angles[:-1])
+ax4.set_xticklabels(radar_labels)
+ax4.set_title("Average Audio Profile")
+st.pyplot(fig4)
 
     # ⚖️ Speechiness vs Instrumentalness
     st.subheader("⚖️ Speechiness vs Instrumentalness")
