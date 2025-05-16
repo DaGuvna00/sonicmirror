@@ -132,7 +132,7 @@ from wordcloud import WordCloud
 st.subheader("☁️ Artist & Genre Word Clouds")
 
 # Make sure we have data to work with
-if "Artist Name(s)" in df.columns and df["Artist Name(s)"].notna().sum() > 0:
+if 'df' in locals() and "Artist Name(s)" in df.columns:
     artist_text = " ".join(df["Artist Name(s)"].dropna().astype(str).tolist())
     artist_wc = WordCloud(width=800, height=400, background_color="white").generate(artist_text)
 
