@@ -91,7 +91,7 @@ def get_audio_features_in_batches(track_ids):
             if features:
                 all_tracks[i].update(features)
 
-        df = pd.DataFrame(all_tracks)
+    df = pd.DataFrame(all_tracks)
         st.success(f"🎉 Loaded {len(df)} tracks from {len(selected_names)} playlist(s).")
 
         # ---- Preview the Data ----
