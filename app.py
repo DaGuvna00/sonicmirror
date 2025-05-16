@@ -17,7 +17,8 @@ try:
     # Try to authenticate and fetch user
     sp = spotipy.Spotify(auth_manager=auth_manager)
     user = sp.current_user()
-    st.success(f"✅ Logged in as: {user['display_name']}")
+   st.success(f"✅ Logged in as: {user['display_name']}")
+
 
     # Fetch and show playlists
     st.subheader("🎵 Your Spotify Playlists")
