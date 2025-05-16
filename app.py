@@ -126,6 +126,29 @@ if uploaded_files:
         ax8.set_xlabel("Key")
         ax8.set_ylabel("Track Count")
         st.pyplot(fig8)
+from wordcloud import WordCloud
+
+# --- WORD CLOUDS: Artist + Genre ---
+st.subheader("☁️ Artist & Genre Word Clouds")
+
+# Make sure we have data to work with
+if "Artist Name(s)" in df.columns and df["Artist Name(s)"].notna().sum() > 0:
+    artist_text = " ".join(df["Artist Name(s)"].dropna().astype(str).tolist())
+    artist_wc = WordCloud(width=800, height=400, background_color="white").generate(artist_text)
+
+    st.markdown("### 🎤 Most Frequent Artists")
+    st.image(artist_wc.to_array(), use_column_width=True)
+else:
+    st.warning("No artist data found to generate word cloud.")
+
+if "Genres" in df.columns and df["Genres"].notna().sum() > 0:
+    genre_text = " ".join(df["Genres"].dropna().astype(str).tolist())
+    genre_wc = WordCloud(width=800, height=400, background_color="white").generate(genre_text)
+
+    st.markdown("### 🎼 Most Common Genres")
+    st.image(genre_wc.to_array(), use_column_width=True)
+else:
+    st.warning("No genre data found to generate word cloud.")
 
 else:
     st.info("📁 Upload a playlist file to get started.")
