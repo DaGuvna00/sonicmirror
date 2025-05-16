@@ -34,8 +34,6 @@ if code:
 else:
     st.markdown(f"[Click here to log in with Spotify]({auth_url})")
     st.stop()
-
-else:
     # Logged in
     sp = spotipy.Spotify(auth=st.session_state.access_token)
     user = sp.current_user()
