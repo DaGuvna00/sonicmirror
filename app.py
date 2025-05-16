@@ -60,7 +60,7 @@ if uploaded_files:
 
         with st.spinner("Analyzing your vibe..."):
             response = requests.post(
-                "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.1",
+                "https://api-inference.huggingface.co/models/bigscience/bloomz-560m",
                 headers={"Authorization": f"Bearer {st.secrets['HF_TOKEN']}"},
                 json={"inputs": summary_prompt}
             )
@@ -71,7 +71,7 @@ if uploaded_files:
                 st.success("Here's what the AI thinks of your vibe:")
                 st.markdown(f"> {personality_summary}")
             else:
-                st.error("Something went wrong generating your summary. Try again later.")
+                st.error(f"API error {response.status_code}: {response.text}")
     else:
         st.warning("Not enough features to analyze. Upload a playlist with Energy and Valence data.")
 
