@@ -15,36 +15,36 @@ from spotipy.oauth2 import SpotifyOAuth
 
 # --- Spotify Auth Setup ---
 
-SPOTIPY\_CLIENT\_ID = st.secrets\["SPOTIPY\_CLIENT\_ID"]
-SPOTIPY\_CLIENT\_SECRET = st.secrets\["SPOTIPY\_CLIENT\_SECRET"]
-SPOTIPY\_REDIRECT\_URI = "[https://sonicmirror.streamlit.app](https://sonicmirror.streamlit.app)"
+SPOTIPY_CLIENT_ID = st.secrets["SPOTIPY_CLIENT_ID"]
+SPOTIPY_CLIENT_SECRET = st.secrets["SPOTIPY_CLIENT_SECRET"]
+SPOTIPY_REDIRECT_URI = "[https://sonicmirror.streamlit.app](https://sonicmirror.streamlit.app)"
 
 scope = "playlist-read-private playlist-read-collaborative"
 
-sp\_oauth = SpotifyOAuth(
-client\_id=SPOTIPY\_CLIENT\_ID,
-client\_secret=SPOTIPY\_CLIENT\_SECRET,
-redirect\_uri=SPOTIPY\_REDIRECT\_URI,
+sp_oauth = SpotifyOAuth(
+client_id=SPOTIPY_CLIENT_ID,
+client_secret=SPOTIPY_CLIENT_SECRET,
+redirect_uri=SPOTIPY_REDIRECT_URI,
 scope=scope,
-show\_dialog=True  # 👈 Forces login prompt even if already authenticated
+show_dialog=True  # 👈 Forces login prompt even if already authenticated
 )
 
 # --- UI ---
 
 st.title("🎶 SonicMirror – Analyze Your Spotify Playlists")
 
-auth\_url = sp\_oauth.get\_authorize\_url()
+auth_url = sp_oauth.get_authorize_url()
 st.markdown(f"[🔐 Log in with Spotify]({auth_url})")
 
 # Get Spotify OAuth token from query param
 
-code = st.query\_params.get("code")
+code = st.query_params.get("code")
 
 if code:
-token\_info = sp\_oauth.get\_access\_token(code)
-if token\_info:
-access\_token = token\_info\['access\_token']
-sp = spotipy.Spotify(auth=access\_token)
+token_info = sp_oauth.get_access_token(code)
+if token_info:
+access_token = token_info['access_token']
+sp = spotipy.Spotify(auth=access_token)
 
 ```
     user = sp.current_user()
@@ -91,14 +91,14 @@ sp = spotipy.Spotify(auth=access\_token)
 
 # --- File Upload ---
 
-uploaded\_files = st.file\_uploader(
+uploaded_files = st.file_uploader(
 "Upload one or more Exportify playlist files (CSV or Excel)",
-type=\["xlsx", "xls", "csv"],
-accept\_multiple\_files=True
+type=["xlsx", "xls", "csv"],
+accept_multiple_files=True
 )
 
-if uploaded\_files:
-all\_dfs = \[]
+if uploaded_files:
+all_dfs = []
 
 ```
 for file in uploaded_files:
