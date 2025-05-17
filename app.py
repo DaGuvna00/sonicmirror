@@ -76,7 +76,10 @@ if code:
                     track_names.append(track['name'])
                     artists.append(", ".join([a['name'] for a in track['artists']]))
                     albums.append(track['album']['name'])
-
+        if not track_ids:
+    st.warning(f"⚠️ No valid track IDs found for playlist '{sel}'. Skipping.")
+    continue
+        
         features = []
 valid_track_ids = [tid for tid in track_ids if tid]
 
