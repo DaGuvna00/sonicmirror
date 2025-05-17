@@ -22,7 +22,8 @@ sp_oauth = SpotifyOAuth(
     client_id=SPOTIPY_CLIENT_ID,
     client_secret=SPOTIPY_CLIENT_SECRET,
     redirect_uri=SPOTIPY_REDIRECT_URI,
-    scope=scope
+    scope=scope,
+    show_dialog=True  # 👈 Forces login prompt even if already authenticated
 )
 
 # --- UI ---
