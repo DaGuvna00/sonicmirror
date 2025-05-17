@@ -56,24 +56,32 @@ if code:
             playlist_id = playlist_ids[idx]
             tracks_data = sp.playlist_tracks(playlist_id)
 
+            track_ids = []
             track_names = []
             artists = []
 
-            for item in tracks_data['items']:
-                track = item['track']
-                if track:  # Check for None
-                    track_names.append(track['name'])
-                    artists.append(", ".join([artist['name'] for artist in track['artists']]))
+                for item in tracks_data['items']:
+            track = item['track']
+                if track and track['id']:  # Check for missing tracks (like removed songs)
+            track_ids.append(track['id'])
+            track_names.append(track['name'])
+            artists.append(", ".join([a['name'] for a in track['artists']]))
 
-            # --- Display Playlist Data ---
-            df = pd.DataFrame({
-                "Track Name": track_names,
-                "Artist(s)": artists
-            })
-
-            st.subheader("📋 Playlist Tracks")
+            # Fetch audio features using track IDs
+            audio_features = sp.audio_features(track_ids)
+            
+            # Convert to DataFrame and merge with names
+            df = pd.DataFrame(audio_features)
+            df["Track Name"] = track_names
+            df["Artist(s)"] = artists
+            
+            # --- Display ---
+            st.subheader("📋 Playlist Tracks with Features")
             st.write(f"**Total Tracks:** {len(df)}")
-            st.dataframe(df)
+            st.dataframe(df[[
+                "Track Name", "Artist(s)", "energy", "valence", "danceability", "acousticness", "tempo"
+            ]])
+
 
 
 # --- File Upload ---
