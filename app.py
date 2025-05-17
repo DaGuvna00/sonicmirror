@@ -5,7 +5,6 @@ import matplotlib.pyplot as plt
 from wordcloud import WordCloud
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
-from urllib.parse import urlparse, parse_qs
 
 # --- Streamlit Setup ---
 st.set_page_config(page_title="SonicMirror - Playlist Analyzer", layout="wide")
@@ -32,55 +31,65 @@ st.markdown(f"[🔐 Log in with Spotify]({auth_url})")
 all_dfs = []
 
 # Get code from URL
-query_params = st.experimental_get_query_params()
+query_params = st.query_params
 code = query_params.get("code", [None])[0]
 
 if "token_info" not in st.session_state and code:
     try:
         token_info = sp_oauth.get_access_token(code)
-        st.session_state.token_info = token_info
+        if token_info and token_info.get("access_token"):
+            st.session_state.token_info = token_info
+        else:
+            st.error("Failed to retrieve access token. Please try logging in again.")
     except spotipy.oauth2.SpotifyOauthError:
         st.error("Spotify authorization failed. Please try again.")
 
 if "token_info" in st.session_state:
-    sp = spotipy.Spotify(auth=st.session_state.token_info['access_token'])
+    access_token = st.session_state.token_info.get("access_token")
+    if access_token:
+        sp = spotipy.Spotify(auth=access_token)
 
-    try:
-        user = sp.current_user()
-        st.success(f"Logged in as {user['display_name']}")
-    except spotipy.exceptions.SpotifyException:
-        st.error("Failed to fetch user profile. Your token might have expired.")
+        try:
+            user = sp.current_user()
+            st.success(f"Logged in as {user['display_name']}")
+        except spotipy.exceptions.SpotifyException:
+            st.error("Failed to fetch user profile. Your token might have expired.")
 
-    # --- Playlist Selection ---
-    playlists = sp.current_user_playlists(limit=50)
-    playlist_names = [pl['name'] for pl in playlists['items']]
-    playlist_ids = [pl['id'] for pl in playlists['items']]
+        # --- Playlist Selection ---
+        playlists = sp.current_user_playlists(limit=50)
+        playlist_names = [pl['name'] for pl in playlists['items']]
+        playlist_ids = [pl['id'] for pl in playlists['items']]
 
-    selected = st.selectbox("🎧 Choose a Playlist", playlist_names)
+        selected = st.selectbox("🎧 Choose a Playlist", playlist_names)
 
-    if selected:
-        idx = playlist_names.index(selected)
-        playlist_id = playlist_ids[idx]
-        tracks_data = sp.playlist_tracks(playlist_id)
+        if selected:
+            idx = playlist_names.index(selected)
+            playlist_id = playlist_ids[idx]
+            tracks_data = sp.playlist_tracks(playlist_id)
 
-        track_ids = []
-        track_names = []
-        artists = []
+            track_ids = []
+            track_names = []
+            artists = []
 
-        for item in tracks_data['items']:
-            track = item['track']
-            if track and track['id']:
-                track_ids.append(track['id'])
-                track_names.append(track['name'])
-                artists.append(", ".join([a['name'] for a in track['artists']]))
+            for item in tracks_data['items']:
+                track = item['track']
+                if track and track['id']:
+                    track_ids.append(track['id'])
+                    track_names.append(track['name'])
+                    artists.append(", ".join([a['name'] for a in track['artists']]))
 
-        if track_ids:
-            audio_features = sp.audio_features(track_ids)
-            df = pd.DataFrame(audio_features)
-            df["Track Name"] = track_names
-            df["Artist Name(s)"] = artists
-            df["Playlist"] = selected
-            all_dfs.append(df)
+            if track_ids:
+                audio_features = sp.audio_features(track_ids)
+                if audio_features:
+                    df = pd.DataFrame(audio_features)
+                    df["Track Name"] = track_names
+                    df["Artist Name(s)"] = artists
+                    df["Playlist"] = selected
+                    all_dfs.append(df)
+                else:
+                    st.error("Failed to fetch audio features. Please try again.")
+    else:
+        st.error("Access token is missing or invalid. Please re-authenticate.")
 
 # --- Exportify Upload ---
 uploaded_files = st.file_uploader(
