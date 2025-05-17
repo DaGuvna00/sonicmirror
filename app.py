@@ -2,7 +2,7 @@ import streamlit as st
 
 # This must be the FIRST Streamlit call
 
-st.set\_page\_config(page\_title="SonicMirror - Playlist Analyzer", layout="wide"
+st.set\_page\_config(page\_title="SonicMirror - Playlist Analyzer", layout="wide")
 
 # --- Imports ---
 
