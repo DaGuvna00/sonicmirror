@@ -74,8 +74,6 @@ if code:
             st.write(f"**Total Tracks:** {len(df)}")
             st.dataframe(df)
 
-st.set_page_config(page_title="SonicMirror - Playlist Analyzer", layout="wide")
-st.title("🎶 SonicMirror – Upload Your Spotify Playlists")
 
 # --- File Upload ---
 uploaded_files = st.file_uploader(
