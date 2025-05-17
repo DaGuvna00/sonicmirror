@@ -33,7 +33,13 @@ auth_url = sp_oauth.get_authorize_url()
 st.markdown(f"[\U0001F511 Log in with Spotify]({auth_url})")
 
 # Initialize DataFrame
-df = None
+all_data = []
+
+# Helper to chunk track IDs
+
+def chunked(iterable, size=100):
+    for i in range(0, len(iterable), size):
+        yield iterable[i:i + size]
 
 # --- Spotify Logic ---
 code = st.query_params.get("code")
@@ -51,16 +57,17 @@ if code:
         playlist_names = [pl['name'] for pl in playlists['items']]
         playlist_ids = [pl['id'] for pl in playlists['items']]
 
-        selected = st.selectbox("\U0001F3A7 Choose a Playlist", playlist_names)
+        selected = st.multiselect("\U0001F3A7 Choose One or More Playlists", playlist_names)
 
-        if selected:
-            idx = playlist_names.index(selected)
+        for sel in selected:
+            idx = playlist_names.index(sel)
             playlist_id = playlist_ids[idx]
             tracks_data = sp.playlist_tracks(playlist_id)
 
             track_ids = []
             track_names = []
             artists = []
+            albums = []
 
             for item in tracks_data['items']:
                 track = item['track']
@@ -68,13 +75,17 @@ if code:
                     track_ids.append(track['id'])
                     track_names.append(track['name'])
                     artists.append(", ".join([a['name'] for a in track['artists']]))
+                    albums.append(track['album']['name'])
 
-            audio_features = sp.audio_features(track_ids)
+            features = []
+            for chunk in chunked(track_ids):
+                features.extend(sp.audio_features(chunk))
 
-            df = pd.DataFrame(audio_features)
+            df = pd.DataFrame(features)
             df["Track Name"] = track_names
             df["Artist Name(s)"] = artists
-            df["Playlist"] = selected
+            df["Album Name"] = albums
+            df["Playlist"] = sel
 
             df.rename(columns={
                 "energy": "Energy",
@@ -88,6 +99,12 @@ if code:
                 "loudness": "Loudness",
                 "key": "Key"
             }, inplace=True)
+
+            all_data.append(df)
+
+# Combine all collected data
+if all_data:
+    df = pd.concat(all_data, ignore_index=True)
 
 # --- Exportify Upload Logic ---
 uploaded_files = st.file_uploader(
@@ -115,42 +132,30 @@ if uploaded_files:
     df = df[df["Duration (ms)"] > 0]
 
 # --- Shared Chart Section ---
-if df is not None:
+if 'df' in locals() and df is not None:
     st.subheader("\U0001F4CB Playlist Overview")
     st.write(f"**Tracks loaded:** {len(df)}")
     st.dataframe(df.head())
 
-    # Averages
-    st.subheader("\U0001F3DB Key Audio Feature Averages")
-    metrics = ["Energy", "Valence", "Danceability", "Acousticness", "Instrumentalness", "Liveness", "Tempo"]
-    available_metrics = [m for m in metrics if m in df.columns]
-    st.dataframe(df[available_metrics].mean().round(3).rename("Average").to_frame())
+    # Comparison: Radar per playlist
+    st.subheader("\U0001F9EA Playlist Comparison – Radar Chart")
+    metrics = ["Energy", "Valence", "Danceability", "Acousticness", "Instrumentalness", "Liveness"]
+    grouped = df.groupby("Playlist")[metrics].mean()
+    angles = np.linspace(0, 2 * np.pi, len(metrics), endpoint=False).tolist()
+    angles += angles[:1]
 
-    # Mood Map
-    if "Energy" in df.columns and "Valence" in df.columns:
-        st.subheader("\U0001F3A8 Mood Map: Energy vs Valence")
-        fig1, ax1 = plt.subplots()
-        ax1.scatter(df["Energy"], df["Valence"], alpha=0.5)
-        ax1.set_xlabel("Energy")
-        ax1.set_ylabel("Valence")
-        ax1.set_title("Track Mood Distribution")
-        st.pyplot(fig1)
+    fig, ax = plt.subplots(subplot_kw={"polar": True})
+    for playlist in grouped.index:
+        values = grouped.loc[playlist].tolist()
+        values += values[:1]
+        ax.plot(angles, values, label=playlist)
+        ax.fill(angles, values, alpha=0.1)
+    ax.set_xticks(angles[:-1])
+    ax.set_xticklabels(metrics)
+    ax.set_title("Average Audio Features by Playlist")
+    ax.legend(loc='upper right', bbox_to_anchor=(1.1, 1.1))
+    st.pyplot(fig)
 
-    # Radar Chart
-    radar_labels = [m for m in ["Energy", "Valence", "Danceability", "Acousticness", "Instrumentalness", "Liveness"] if m in df.columns]
-    if radar_labels:
-        st.subheader("\U0001F5B8 Audio Feature Profile")
-        radar_values = df[radar_labels].mean().tolist()
-        angles = np.linspace(0, 2 * np.pi, len(radar_labels), endpoint=False).tolist()
-        radar_values += radar_values[:1]
-        angles += angles[:1]
-        fig2, ax2 = plt.subplots(subplot_kw={"polar": True})
-        ax2.plot(angles, radar_values, "o-", linewidth=2)
-        ax2.fill(angles, radar_values, alpha=0.25)
-        ax2.set_xticks(angles[:-1])
-        ax2.set_xticklabels(radar_labels)
-        ax2.set_title("Average Audio Profile")
-        st.pyplot(fig2)
 
     # Tempo Distribution
     if "Tempo" in df.columns:
@@ -172,9 +177,31 @@ if df is not None:
         ax4.set_title("Loudness Across Tracks")
         st.pyplot(fig4)
 
+    # Key Distribution
+    if "Key" in df.columns:
+        st.subheader("\U0001F3B9 Most Common Musical Keys")
+        key_names = {
+            0: "C", 1: "C♯/D♭", 2: "D", 3: "D♯/E♭", 4: "E", 5: "F",
+            6: "F♯/G♭", 7: "G", 8: "G♯/A♭", 9: "A", 10: "A♯/B♭", 11: "B"
+        }
+        key_counts = df["Key"].map(key_names).value_counts().sort_index()
+        fig5, ax5 = plt.subplots()
+        key_counts.plot(kind="bar", ax=ax5)
+        ax5.set_title("Most Common Musical Keys")
+        ax5.set_xlabel("Key")
+        ax5.set_ylabel("Track Count")
+        st.pyplot(fig5)
+
     # Word Cloud - Artists
     if "Artist Name(s)" in df.columns and df["Artist Name(s)"].notna().sum() > 0:
         st.subheader("\u2601\ufe0f Artist Word Cloud")
         artist_text = " ".join(df["Artist Name(s)"].dropna().astype(str).tolist())
         artist_wc = WordCloud(width=800, height=400, background_color="white").generate(artist_text)
         st.image(artist_wc.to_array(), use_container_width=True)
+
+    # Word Cloud - Albums
+    if "Album Name" in df.columns and df["Album Name"].notna().sum() > 0:
+        st.subheader("\u2601\ufe0f Album Word Cloud")
+        album_text = " ".join(df["Album Name"].dropna().astype(str).tolist())
+        album_wc = WordCloud(width=800, height=400, background_color="white").generate(album_text)
+        st.image(album_wc.to_array(), use_container_width=True)
