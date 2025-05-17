@@ -101,41 +101,6 @@ if uploaded_files:
     df = df.dropna(subset=["Track Name", "Artist Name(s)"])
     df = df[df["Duration (ms)"] > 0]
 
-    # 🧠 Playlist Personality Summary (AI-Generated)
-    st.subheader("🧠 Playlist Personality Summary")
-
-    if "Valence" in df.columns and "Energy" in df.columns:
-        # Create summary prompt
-        average_vals = df[["Valence", "Energy", "Danceability", "Acousticness", "Tempo"]].mean().round(2)
-        summary_prompt = f"""
-        Based on the following average Spotify audio features:
-
-        - Valence (happiness): {average_vals['Valence']}
-        - Energy: {average_vals['Energy']}
-        - Danceability: {average_vals['Danceability']}
-        - Acousticness: {average_vals['Acousticness']}
-        - Tempo: {average_vals['Tempo']}
-
-        Write a short, insightful and engaging personality analysis of the user’s music taste.
-        """
-
-        with st.spinner("Analyzing your vibe..."):
-            response = requests.post(
-                "https://api-inference.huggingface.co/models/gpt2",
-                headers={"Authorization": f"Bearer {st.secrets['HF_TOKEN']}"},
-                json={"inputs": summary_prompt}
-            )
-
-            if response.status_code == 200:
-                result = response.json()
-                personality_summary = result[0]["generated_text"]
-                st.success("Here's what the AI thinks of your vibe:")
-                st.markdown(f"> {personality_summary}")
-            else:
-                st.error(f"API error {response.status_code}: {response.text}")
-    else:
-        st.warning("Not enough features to analyze. Upload a playlist with Energy and Valence data.")
-
     st.subheader("📋 Playlist Overview")
     st.write(f"**Tracks loaded:** {len(df)}")
     st.dataframe(df[["Track Name", "Artist Name(s)", "Playlist", "Release Date", "Popularity"]].head())
