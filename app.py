@@ -192,21 +192,17 @@ if uploaded_files:
 
 st.subheader("🧪 Hugging Face Test")
 
-if st.button("Run GPT-2 Test"):
-    test_prompt = "Describe a playlist with high energy, low acousticness and high danceability."
-
-    response = requests.post(
-        "https://api-inference.huggingface.co/models/gpt2",
+    if st.button("Run GPT-2 Test"):
+        test_prompt = "Summarize: The playlist is energetic, happy, acoustic and fast."
+        response = requests.post(
+        "https://api-inference.huggingface.co/models/google/flan-t5-small",
         headers={"Authorization": f"Bearer {st.secrets['HF_TOKEN']}"},
         json={"inputs": test_prompt}
     )
-
-    st.write(f"Response code: {response.status_code}")
-
+    st.write(response.status_code)
     if response.status_code == 200:
-        result = response.json()
-        st.success("✅ Response:")
-        st.write(result[0]["generated_text"])
+        st.success(response.json()[0]['generated_text'])
     else:
-        st.error(f"❌ API Error {response.status_code}: {response.text}")
+        st.error(response.text)
+
 
