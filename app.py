@@ -1,22 +1,22 @@
-
 import streamlit as st
+
+# This must be the FIRST Streamlit call
+st.set_page_config(page_title="SonicMirror - Playlist Analyzer", layout="wide")
+
+# --- Imports ---
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from wordcloud import WordCloud
-import requests
-
-headers = {
-    "Authorization": f"Bearer {st.secrets['HF_TOKEN']}"
-}
-
+import spotipy
 from spotipy.oauth2 import SpotifyOAuth
 
+# --- Spotify Auth Setup ---
 SPOTIPY_CLIENT_ID = st.secrets["SPOTIPY_CLIENT_ID"]
 SPOTIPY_CLIENT_SECRET = st.secrets["SPOTIPY_CLIENT_SECRET"]
-SPOTIPY_REDIRECT_URI = "https://sonicmirror.streamlit.app"  # or localhost if testing locally
+SPOTIPY_REDIRECT_URI = "https://sonicmirror.streamlit.app"
 
-scope = "playlist-read-private playlist-read-collaborative user-library-read"
+scope = "playlist-read-private playlist-read-collaborative"
 
 sp_oauth = SpotifyOAuth(
     client_id=SPOTIPY_CLIENT_ID,
@@ -24,13 +24,18 @@ sp_oauth = SpotifyOAuth(
     redirect_uri=SPOTIPY_REDIRECT_URI,
     scope=scope
 )
+
+# --- UI ---
+st.title("🎶 SonicMirror – Analyze Your Spotify Playlists")
+
 auth_url = sp_oauth.get_authorize_url()
 st.markdown(f"[🔐 Log in with Spotify]({auth_url})")
 
-code = st.experimental_get_query_params().get("code")
+# Get Spotify OAuth token from query param
+code = st.query_params.get("code")
 
 if code:
-    token_info = sp_oauth.get_access_token(code[0])
+    token_info = sp_oauth.get_access_token(code)
     if token_info:
         access_token = token_info['access_token']
         sp = spotipy.Spotify(auth=access_token)
@@ -38,6 +43,36 @@ if code:
         user = sp.current_user()
         st.success(f"Logged in as {user['display_name']}")
 
+        # --- Playlist Selection ---
+        playlists = sp.current_user_playlists(limit=50)
+        playlist_names = [pl['name'] for pl in playlists['items']]
+        playlist_ids = [pl['id'] for pl in playlists['items']]
+
+        selected = st.selectbox("🎧 Choose a Playlist", playlist_names)
+
+        if selected:
+            idx = playlist_names.index(selected)
+            playlist_id = playlist_ids[idx]
+            tracks_data = sp.playlist_tracks(playlist_id)
+
+            track_names = []
+            artists = []
+
+            for item in tracks_data['items']:
+                track = item['track']
+                if track:  # Check for None
+                    track_names.append(track['name'])
+                    artists.append(", ".join([artist['name'] for artist in track['artists']]))
+
+            # --- Display Playlist Data ---
+            df = pd.DataFrame({
+                "Track Name": track_names,
+                "Artist(s)": artists
+            })
+
+            st.subheader("📋 Playlist Tracks")
+            st.write(f"**Total Tracks:** {len(df)}")
+            st.dataframe(df)
 
 st.set_page_config(page_title="SonicMirror - Playlist Analyzer", layout="wide")
 st.title("🎶 SonicMirror – Upload Your Spotify Playlists")
