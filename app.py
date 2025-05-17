@@ -78,8 +78,13 @@ if code:
                     albums.append(track['album']['name'])
 
             features = []
-            for chunk in chunked(track_ids):
-                features.extend(sp.audio_features(chunk))
+            for chunk in chunked([tid for tid in track_ids if tid]):
+                try:
+                    data = sp.audio_features(chunk)
+                    if data:
+                        features.extend([f for f in data if f])  # skip None results
+                except spotipy.SpotifyException as e:
+                    st.warning(f"Skipped a chunk due to Spotify error: {e}")
 
             df = pd.DataFrame(features)
             df["Track Name"] = track_names
@@ -155,6 +160,7 @@ if 'df' in locals() and df is not None:
     ax.set_title("Average Audio Features by Playlist")
     ax.legend(loc='upper right', bbox_to_anchor=(1.1, 1.1))
     st.pyplot(fig)
+
 
 
     # Tempo Distribution
