@@ -98,7 +98,6 @@ accept_multiple_files=True
 if uploaded_files:
     all_dfs = []
 
-```
 for file in uploaded_files:
     filename = file.name.rsplit(".", 1)[0]
 
@@ -229,4 +228,3 @@ if "Genres" in df.columns and df["Genres"].notna().sum() > 0:
     st.image(genre_wc.to_array(), use_container_width=True)
 else:
     st.warning("No genre data found to generate word cloud.")
-```
