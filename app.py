@@ -65,13 +65,15 @@ if "token_info" in st.session_state:
             st.error("Token refresh failed. Please log in again.")
             st.exception(e)
             st.stop()
-
-    # Step 6: Confirm successful login and get user profile
+  
+# Step 6: Confirm successful login and get user profile
     access_token = st.session_state["token_info"].get("access_token")
     if access_token:
         try:
             sp = spotipy.Spotify(auth=access_token)
+            st.write("🔍 Access token preview:", access_token[:10] + "...")
             user = sp.current_user()
+            st.write("🧪 User data:", user)
             st.success(f"✅ Logged in as {user['display_name']}")
             # TODO: Add playlist interaction below
         except Exception as e:
