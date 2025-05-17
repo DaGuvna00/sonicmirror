@@ -36,7 +36,7 @@ code = query_params.get("code", [None])[0]
 
 if code and "token_info" not in st.session_state:
     st.session_state["auth_code"] = code
-    st.query_params = {}  # New way to clear query params in Streamlit ≥1.33
+    st.query_params = {}  # Clear ?code=... from URL to prevent reuse  # Clear ?code=... from URL to prevent reuse
 
 if "auth_code" in st.session_state and "token_info" not in st.session_state:
     try:
