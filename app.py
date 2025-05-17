@@ -10,6 +10,34 @@ headers = {
     "Authorization": f"Bearer {st.secrets['HF_TOKEN']}"
 }
 
+from spotipy.oauth2 import SpotifyOAuth
+
+SPOTIPY_CLIENT_ID = st.secrets["SPOTIPY_CLIENT_ID"]
+SPOTIPY_CLIENT_SECRET = st.secrets["SPOTIPY_CLIENT_SECRET"]
+SPOTIPY_REDIRECT_URI = "https://sonicmirror.streamlit.app"  # or localhost if testing locally
+
+scope = "playlist-read-private playlist-read-collaborative user-library-read"
+
+sp_oauth = SpotifyOAuth(
+    client_id=SPOTIPY_CLIENT_ID,
+    client_secret=SPOTIPY_CLIENT_SECRET,
+    redirect_uri=SPOTIPY_REDIRECT_URI,
+    scope=scope
+)
+auth_url = sp_oauth.get_authorize_url()
+st.markdown(f"[🔐 Log in with Spotify]({auth_url})")
+
+code = st.experimental_get_query_params().get("code")
+
+if code:
+    token_info = sp_oauth.get_access_token(code[0])
+    if token_info:
+        access_token = token_info['access_token']
+        sp = spotipy.Spotify(auth=access_token)
+
+        user = sp.current_user()
+        st.success(f"Logged in as {user['display_name']}")
+
 
 st.set_page_config(page_title="SonicMirror - Playlist Analyzer", layout="wide")
 st.title("🎶 SonicMirror – Upload Your Spotify Playlists")
