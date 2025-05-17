@@ -66,11 +66,11 @@ if token_info:
         artists = []
 
         for item in tracks_data['items']:
-        track = item['track']
+            track = item['track']
         if track and track['id']:  # Check for missing tracks (like removed songs)
-        track_ids.append(track['id'])
-        track_names.append(track['name'])
-        artists.append(", ".join([a['name'] for a in track['artists']]))
+            track_ids.append(track['id'])
+            track_names.append(track['name'])
+            artists.append(", ".join([a['name'] for a in track['artists']]))
 
         # Fetch audio features using track IDs
         audio_features = sp.audio_features(track_ids)
