@@ -86,7 +86,6 @@ if token_info:
         st.dataframe(df[[
             "Track Name", "Artist(s)", "energy", "valence", "danceability", "acousticness", "tempo"
         ]])
-```
 
 # --- File Upload ---
 
