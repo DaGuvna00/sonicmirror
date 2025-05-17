@@ -28,6 +28,9 @@ auth_url = sp_oauth.get_authorize_url()
 st.markdown(f"[🔐 Log in with Spotify]({auth_url})")
 
 # --- Spotify OAuth Token Management ---
+st.write("🔍 Debug: query_params", query_params)
+st.write("🔍 Debug: code", code)
+st.write("🔍 Debug: session_state", dict(st.session_state))
 all_dfs = []
 
 # Get code from URL
@@ -37,6 +40,7 @@ code = query_params.get("code", [None])[0]
 if code and "token_info" not in st.session_state:
     st.session_state["auth_code"] = code
     st.query_params = {}  # Clear ?code=... from URL to prevent reuse  # Clear ?code=... from URL to prevent reuse
+
 
 if "auth_code" in st.session_state and "token_info" not in st.session_state:
     try:
