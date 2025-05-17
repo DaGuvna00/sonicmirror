@@ -35,7 +35,8 @@ query_params = st.query_params
 code = query_params.get("code", [None])[0]
 
 if code and "token_info" not in st.session_state:
-    st.session_state["auth_code"] = code  # Save code quickly to avoid reuse timeout
+    st.session_state["auth_code"] = code
+    st.experimental_set_query_params()  # Clear ?code=... from URL to prevent reuse
 
 if "auth_code" in st.session_state and "token_info" not in st.session_state:
     try:
