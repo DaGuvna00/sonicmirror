@@ -146,8 +146,8 @@ if 'df' in locals() and df is not None:
     st.subheader("\U0001F9EA Playlist Comparison – Radar Chart")
     metrics = ["Energy", "Valence", "Danceability", "Acousticness", "Instrumentalness", "Liveness"]
     available_metrics = [m for m in metrics if m in df.columns]
-    if not available_metrics:
-        st.warning("No audio features available for comparison.")
+if not available_metrics:
+    st.warning("No audio features available for comparison.")
 else:
     grouped = df.groupby("Playlist")[available_metrics].mean()
     angles = np.linspace(0, 2 * np.pi, len(available_metrics), endpoint=False).tolist()
@@ -164,6 +164,7 @@ else:
     ax.set_title("Average Audio Features by Playlist")
     ax.legend(loc='upper right', bbox_to_anchor=(1.1, 1.1))
     st.pyplot(fig)
+
 
 
 
