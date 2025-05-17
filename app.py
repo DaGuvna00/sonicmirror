@@ -90,7 +90,8 @@ if "token_info" in st.session_state:
 
             for item in tracks_data['items']:
                 track = item['track']
-                if track and track['id']:
+                if track and track['id'] and track.get('is_playable', True) and track['type'] == 'track':
+                    # st.json(track)  # Optional debug
                     track_ids.append(track['id'])
                     track_names.append(track['name'])
                     artists.append(", ".join([a['name'] for a in track['artists']]))
@@ -115,6 +116,7 @@ if "token_info" in st.session_state:
                     st.stop()
     else:
         st.error("Access token is missing or invalid. Please re-authenticate.")
+
 # --- Exportify Upload ---
 uploaded_files = st.file_uploader(
     "Upload one or more Exportify playlist files (CSV or Excel)",
