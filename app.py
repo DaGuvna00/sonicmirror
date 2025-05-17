@@ -48,6 +48,21 @@ if "token_info" in st.session_state:
     access_token = st.session_state.token_info.get("access_token")
     st.write("Access token preview:", access_token[:10] + "...")  # Debug
 
+    # --- Manual token test ---
+    st.write("🔍 Access token headers test:")
+    try:
+        import requests
+        headers = {
+            "Authorization": f"Bearer {access_token}"
+        }
+        test_url = "https://api.spotify.com/v1/me"
+        resp = requests.get(test_url, headers=headers)
+        st.code(resp.status_code)
+        st.json(resp.json())
+    except Exception as e:
+        st.error("Manual token test failed:")
+        st.exception(e)
+
     if access_token:
         sp = spotipy.Spotify(auth=access_token)
 
