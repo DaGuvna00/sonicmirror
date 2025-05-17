@@ -28,73 +28,48 @@ auth_url = sp_oauth.get_authorize_url()
 st.markdown(f"[🔐 Log in with Spotify]({auth_url})")
 
 # --- Spotify OAuth Token Management ---
-# Get code from URL
+all_dfs = []
+
+# Step 1: Get query params ONCE
 query_params = st.query_params
 code = query_params.get("code", [None])[0]
 
+# Step 2: Debug view
 st.write("🔍 Debug: query_params", query_params)
 st.write("🔍 Debug: code", code)
 st.write("🔍 Debug: session_state", dict(st.session_state))
 
-all_dfs = []
-
-# Get code from URL
-query_params = st.query_params
-code = query_params.get("code", [None])[0]
-
-if code and "token_info" not in st.session_state:
+# Step 3: Save code into session and clear URL
+if code and "auth_code" not in st.session_state:
     st.session_state["auth_code"] = code
-    st.query_params = {}  # Clear ?code=... from URL to prevent reuse  # Clear ?code=... from URL to prevent reuse
+    st.query_params = {}  # clear it only once
 
-
-
+# Step 4: Exchange auth_code for token
 if "auth_code" in st.session_state and "token_info" not in st.session_state:
     try:
         token_info = sp_oauth.get_access_token(st.session_state["auth_code"], as_dict=True)
         if token_info and token_info.get("access_token"):
-            st.session_state.token_info = token_info
+            st.session_state["token_info"] = token_info
         else:
-            st.error("Spotify login failed: access token missing.")
+            st.error("Failed to get Spotify token. Please log in again.")
+            st.stop()
     except Exception as e:
-        st.error("Spotify OAuth error during token exchange.")
+        st.error("Spotify token exchange failed.")
         st.exception(e)
         st.stop()
 
+# Step 5: Refresh token if expired
 if "token_info" in st.session_state:
-    if sp_oauth.is_token_expired(st.session_state.token_info):
+    if sp_oauth.is_token_expired(st.session_state["token_info"]):
         try:
-            st.session_state.token_info = sp_oauth.refresh_access_token(st.session_state.token_info['refresh_token'])
+            st.session_state["token_info"] = sp_oauth.refresh_access_token(
+                st.session_state["token_info"]["refresh_token"]
+            )
         except Exception as e:
-            st.error("Could not refresh Spotify token. Please log in again.")
+            st.error("Token refresh failed. Please log in again.")
             st.exception(e)
             st.stop()
 
-    access_token = st.session_state.token_info.get("access_token")
-    st.write("Access token preview:", access_token[:10] + "...")  # Debug
-
-    # --- Manual token test ---
-    st.write("🔍 Access token headers test:")
-    try:
-        import requests
-        headers = {
-            "Authorization": f"Bearer {access_token}"
-        }
-        test_url = "https://api.spotify.com/v1/me"
-        resp = requests.get(test_url, headers=headers)
-        st.code(resp.status_code)
-        st.json(resp.json())
-    except Exception as e:
-        st.error("Manual token test failed:")
-        st.exception(e)
-
-    if access_token:
-        sp = spotipy.Spotify(auth=access_token)
-
-        try:
-            user = sp.current_user()
-            st.success(f"Logged in as {user['display_name']}")
-        except spotipy.exceptions.SpotifyException:
-            st.error("Failed to fetch user profile. Your token might have expired.")
 
         # --- Playlist Selection ---
         playlists = sp.current_user_playlists(limit=50)
