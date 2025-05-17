@@ -77,33 +77,44 @@ if code:
                     artists.append(", ".join([a['name'] for a in track['artists']]))
                     albums.append(track['album']['name'])
 
-            features = []
-            for chunk in chunked([tid for tid in track_ids if tid]):
-                try:
-                    data = sp.audio_features(chunk)
-                    if data:
-                        features.extend([f for f in data if f])  # skip None results
-                except spotipy.SpotifyException as e:
-                    st.warning(f"Skipped a chunk due to Spotify error: {e}")
+           features = []
+valid_track_ids = [tid for tid in track_ids if tid]
 
-            df = pd.DataFrame(features)
-            df["Track Name"] = track_names
-            df["Artist Name(s)"] = artists
-            df["Album Name"] = albums
-            df["Playlist"] = sel
+for chunk in chunked(valid_track_ids):
+    try:
+        data = sp.audio_features(chunk)
+        if data:
+            clean_data = [f for f in data if f is not None]
+            if clean_data:
+                features.extend(clean_data)
+    except spotipy.SpotifyException as e:
+        st.warning(f"Skipped a chunk due to Spotify error: {e}")
 
-            df.rename(columns={
-                "energy": "Energy",
-                "valence": "Valence",
-                "danceability": "Danceability",
-                "acousticness": "Acousticness",
-                "instrumentalness": "Instrumentalness",
-                "speechiness": "Speechiness",
-                "liveness": "Liveness",
-                "tempo": "Tempo",
-                "loudness": "Loudness",
-                "key": "Key"
-            }, inplace=True)
+# Only proceed if we got audio features
+if features:
+    df = pd.DataFrame(features)
+    df["Track Name"] = track_names[:len(df)]
+    df["Artist Name(s)"] = artists[:len(df)]
+    df["Album Name"] = albums[:len(df)]
+    df["Playlist"] = sel
+
+    df.rename(columns={
+        "energy": "Energy",
+        "valence": "Valence",
+        "danceability": "Danceability",
+        "acousticness": "Acousticness",
+        "instrumentalness": "Instrumentalness",
+        "speechiness": "Speechiness",
+        "liveness": "Liveness",
+        "tempo": "Tempo",
+        "loudness": "Loudness",
+        "key": "Key"
+    }, inplace=True)
+
+    all_data.append(df)
+else:
+    st.warning(f"⚠️ No audio features found for playlist '{sel}'. It may contain unavailable tracks or Spotify may have blocked the request.")
+
 
             all_data.append(df)
 
