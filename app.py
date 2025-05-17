@@ -70,6 +70,19 @@ if "token_info" in st.session_state:
             st.exception(e)
             st.stop()
 
+    # Step 6: Confirm successful login and get user profile
+    access_token = st.session_state["token_info"].get("access_token")
+    if access_token:
+        try:
+            sp = spotipy.Spotify(auth=access_token)
+            user = sp.current_user()
+            st.success(f"✅ Logged in as {user['display_name']}")
+            # TODO: Add playlist interaction below
+        except Exception as e:
+            st.error("Failed to retrieve Spotify user profile.")
+            st.exception(e)
+
+
 
         # --- Playlist Selection ---
         playlists = sp.current_user_playlists(limit=50)
