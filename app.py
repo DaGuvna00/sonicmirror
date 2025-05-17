@@ -147,10 +147,10 @@ if 'df' in locals() and df is not None:
     metrics = ["Energy", "Valence", "Danceability", "Acousticness", "Instrumentalness", "Liveness"]
     available_metrics = [m for m in metrics if m in df.columns]
     if not available_metrics:
-        st.warning("No audio features available for comparison.")
-    else:
-        grouped = df.groupby("Playlist")[available_metrics].mean()
-    angles = np.linspace(0, 2 * np.pi, len(metrics), endpoint=False).tolist()
+    st.warning("No audio features available for comparison.")
+else:
+    grouped = df.groupby("Playlist")[available_metrics].mean()
+    angles = np.linspace(0, 2 * np.pi, len(available_metrics), endpoint=False).tolist()
     angles += angles[:1]
 
     fig, ax = plt.subplots(subplot_kw={"polar": True})
@@ -160,10 +160,11 @@ if 'df' in locals() and df is not None:
         ax.plot(angles, values, label=playlist)
         ax.fill(angles, values, alpha=0.1)
     ax.set_xticks(angles[:-1])
-    ax.set_xticklabels(metrics)
+    ax.set_xticklabels(available_metrics)
     ax.set_title("Average Audio Features by Playlist")
     ax.legend(loc='upper right', bbox_to_anchor=(1.1, 1.1))
     st.pyplot(fig)
+
 
 
     # Tempo Distribution
