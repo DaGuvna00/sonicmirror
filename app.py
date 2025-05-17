@@ -251,19 +251,4 @@ if uploaded_files:
     else:
         st.warning("No genre data found to generate word cloud.")
 
-st.subheader("🧪 Hugging Face Test")
-
-if st.button("Run GPT-2 Test"):
-    test_prompt = "Summarize: The playlist is energetic, happy, acoustic and fast."
-    response = requests.post(
-        "https://api-inference.huggingface.co/models/bigscience/bloomz-560m",
-        headers={"Authorization": f"Bearer {st.secrets['HF_TOKEN']}"},
-        json={"inputs": test_prompt}
-    )
-    st.write(response.status_code)
-    if response.status_code == 200:
-        st.success(response.json()[0]['generated_text'])
-    else:
-        st.error(response.text)
-
 
