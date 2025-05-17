@@ -116,8 +116,6 @@ else:
     st.warning(f"⚠️ No audio features found for playlist '{sel}'. It may contain unavailable tracks or Spotify may have blocked the request.")
 
 
-            all_data.append(df)
-
 # Combine all collected data
 if all_data:
     df = pd.concat(all_data, ignore_index=True)
