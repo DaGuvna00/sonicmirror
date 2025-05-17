@@ -39,13 +39,14 @@ st.write("🔍 Debug: query_params", query_params)
 st.write("🔍 Debug: code", code)
 st.write("🔍 Debug: session_state", dict(st.session_state))
 
-# Step 3–4: Exchange code for token immediately (only once)
+# Step 3–4: Exchange code for token immediately and rerun cleanly
 if code and "token_info" not in st.session_state:
     try:
         token_info = sp_oauth.get_access_token(code, as_dict=True)
         if token_info and token_info.get("access_token"):
             st.session_state["token_info"] = token_info
             st.query_params = {}  # Clear code from URL immediately
+            st.experimental_rerun()  # Rerun fresh without ?code=...
         else:
             st.error("Failed to get Spotify token. Please log in again.")
             st.stop()
@@ -65,8 +66,8 @@ if "token_info" in st.session_state:
             st.error("Token refresh failed. Please log in again.")
             st.exception(e)
             st.stop()
-  
-# Step 6: Confirm successful login and get user profile
+
+    # Step 6: Confirm successful login and get user profile
     access_token = st.session_state["token_info"].get("access_token")
     if access_token:
         try:
@@ -79,7 +80,6 @@ if "token_info" in st.session_state:
         except Exception as e:
             st.error("Failed to retrieve Spotify user profile.")
             st.exception(e)
-
 
 
         # --- Playlist Selection ---
