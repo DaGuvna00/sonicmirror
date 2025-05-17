@@ -34,18 +34,22 @@ all_dfs = []
 query_params = st.query_params
 code = query_params.get("code", [None])[0]
 
-if "token_info" not in st.session_state:
-    if code:
-        try:
-            token_info = sp_oauth.get_access_token(code, as_dict=True)
-            if token_info and token_info.get("access_token"):
-                st.session_state.token_info = token_info
-            else:
-                st.error("Spotify login failed: access token missing.")
-        except Exception as e:
-            st.error("Spotify OAuth error during token exchange.")
-            st.exception(e)
-else:
+if code and "token_info" not in st.session_state:
+    st.session_state["auth_code"] = code  # Save code quickly to avoid reuse timeout
+
+if "auth_code" in st.session_state and "token_info" not in st.session_state:
+    try:
+        token_info = sp_oauth.get_access_token(st.session_state["auth_code"], as_dict=True)
+        if token_info and token_info.get("access_token"):
+            st.session_state.token_info = token_info
+        else:
+            st.error("Spotify login failed: access token missing.")
+    except Exception as e:
+        st.error("Spotify OAuth error during token exchange.")
+        st.exception(e)
+        st.stop()
+
+if "token_info" in st.session_state:
     if sp_oauth.is_token_expired(st.session_state.token_info):
         try:
             st.session_state.token_info = sp_oauth.refresh_access_token(st.session_state.token_info['refresh_token'])
@@ -54,7 +58,6 @@ else:
             st.exception(e)
             st.stop()
 
-if "token_info" in st.session_state:
     access_token = st.session_state.token_info.get("access_token")
     st.write("Access token preview:", access_token[:10] + "...")  # Debug
 
