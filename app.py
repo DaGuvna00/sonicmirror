@@ -77,7 +77,7 @@ if code:
                     artists.append(", ".join([a['name'] for a in track['artists']]))
                     albums.append(track['album']['name'])
 
-           features = []
+        features = []
 valid_track_ids = [tid for tid in track_ids if tid]
 
 for chunk in chunked(valid_track_ids):
