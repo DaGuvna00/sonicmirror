@@ -96,7 +96,7 @@ accept_multiple_files=True
 )
 
 if uploaded_files:
-all_dfs = []
+    all_dfs = []
 
 ```
 for file in uploaded_files:
