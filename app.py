@@ -147,7 +147,7 @@ if 'df' in locals() and df is not None:
     metrics = ["Energy", "Valence", "Danceability", "Acousticness", "Instrumentalness", "Liveness"]
     available_metrics = [m for m in metrics if m in df.columns]
     if not available_metrics:
-    st.warning("No audio features available for comparison.")
+        st.warning("No audio features available for comparison.")
 else:
     grouped = df.groupby("Playlist")[available_metrics].mean()
     angles = np.linspace(0, 2 * np.pi, len(available_metrics), endpoint=False).tolist()
