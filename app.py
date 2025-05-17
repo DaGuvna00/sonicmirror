@@ -24,14 +24,13 @@ sp_oauth = SpotifyOAuth(
     show_dialog=True
 )
 
-# --- UI ---
-st.title("🎶 SonicMirror – Analyze Your Spotify Playlists")
-
 auth_url = sp_oauth.get_authorize_url()
 st.markdown(f"[🔐 Log in with Spotify]({auth_url})")
 
-# --- Get Token & Fetch Playlist ---
+# --- Spotify OAuth ---
+all_dfs = []
 code = st.query_params.get("code")
+
 if code:
     token_info = sp_oauth.get_access_token(code)
     if token_info:
@@ -64,47 +63,13 @@ if code:
                     track_names.append(track['name'])
                     artists.append(", ".join([a['name'] for a in track['artists']]))
 
-            # --- Safely Fetch Audio Features in Chunks ---
-            features = []
-            valid_track_ids = [tid for tid in track_ids if tid]
-
-            for i in range(0, len(valid_track_ids), 100):
-                chunk = valid_track_ids[i:i + 100]
-                try:
-                    chunk_features = sp.audio_features(chunk)
-                    if chunk_features:
-                        clean_chunk = [f for f in chunk_features if f is not None]
-                        features.extend(clean_chunk)
-                except spotipy.SpotifyException as e:
-                    st.warning(f"⚠️ Skipped a chunk due to Spotify error: {e}")
-
-            if not features:
-                st.error("❌ No audio features could be retrieved. Tracks may be unavailable.")
-                st.stop()
-
-            # --- Merge with Metadata ---
-            df = pd.DataFrame(features)
-            df["Track Name"] = track_names[:len(df)]
-            df["Artist Name(s)"] = artists[:len(df)]
-
-            # --- Display Data ---
-            st.subheader("📋 Playlist Tracks with Features")
-            st.write(f"**Total Tracks:** {len(df)}")
-            st.dataframe(df[[
-                "Track Name", "Artist Name(s)", "energy", "valence", "danceability", "acousticness", "tempo"
-            ]])
-
-            # Add here your chart logic if needed, for example:
-            st.subheader("🎛 Key Audio Feature Averages")
-            st.dataframe(df[["energy", "valence", "danceability", "acousticness", "tempo"]].mean().round(3).rename("Average").to_frame())
-
-            st.subheader("🎨 Mood Map: Energy vs Valence")
-            fig, ax = plt.subplots()
-            ax.scatter(df["energy"], df["valence"], alpha=0.5)
-            ax.set_xlabel("Energy")
-            ax.set_ylabel("Valence")
-            ax.set_title("Track Mood Distribution")
-            st.pyplot(fig)
+            if track_ids:
+                audio_features = sp.audio_features(track_ids)
+                df = pd.DataFrame(audio_features)
+                df["Track Name"] = track_names
+                df["Artist Name(s)"] = artists
+                df["Playlist"] = selected
+                all_dfs.append(df)
 
 # --- Exportify Upload ---
 uploaded_files = st.file_uploader(
