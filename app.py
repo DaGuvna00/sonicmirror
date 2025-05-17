@@ -192,9 +192,9 @@ if uploaded_files:
 
 st.subheader("🧪 Hugging Face Test")
 
-    if st.button("Run GPT-2 Test"):
-        test_prompt = "Summarize: The playlist is energetic, happy, acoustic and fast."
-        response = requests.post(
+if st.button("Run GPT-2 Test"):
+    test_prompt = "Summarize: The playlist is energetic, happy, acoustic and fast."
+    response = requests.post(
         "https://api-inference.huggingface.co/models/google/flan-t5-small",
         headers={"Authorization": f"Bearer {st.secrets['HF_TOKEN']}"},
         json={"inputs": test_prompt}
