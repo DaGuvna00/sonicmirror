@@ -65,9 +65,9 @@ if token_info:
         track_names = []
         artists = []
 
-            for item in tracks_data['items']:
+        for item in tracks_data['items']:
         track = item['track']
-            if track and track['id']:  # Check for missing tracks (like removed songs)
+        if track and track['id']:  # Check for missing tracks (like removed songs)
         track_ids.append(track['id'])
         track_names.append(track['name'])
         artists.append(", ".join([a['name'] for a in track['artists']]))
