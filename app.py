@@ -46,6 +46,8 @@ if "token_info" not in st.session_state and code:
 
 if "token_info" in st.session_state:
     access_token = st.session_state.token_info.get("access_token")
+    st.write("Access token preview:", access_token[:10] + "...")  # Debug
+
     if access_token:
         sp = spotipy.Spotify(auth=access_token)
 
@@ -78,19 +80,26 @@ if "token_info" in st.session_state:
                     track_names.append(track['name'])
                     artists.append(", ".join([a['name'] for a in track['artists']]))
 
+            st.write("Track IDs for audio_features:", track_ids)  # Debug
+
             if track_ids:
-                audio_features = sp.audio_features(track_ids)
-                if audio_features:
-                    df = pd.DataFrame(audio_features)
-                    df["Track Name"] = track_names
-                    df["Artist Name(s)"] = artists
-                    df["Playlist"] = selected
-                    all_dfs.append(df)
-                else:
-                    st.error("Failed to fetch audio features. Please try again.")
+                try:
+                    audio_features = sp.audio_features(track_ids)
+                    st.write("Audio features fetched successfully.")  # Debug
+                    if audio_features:
+                        df = pd.DataFrame(audio_features)
+                        df["Track Name"] = track_names
+                        df["Artist Name(s)"] = artists
+                        df["Playlist"] = selected
+                        all_dfs.append(df)
+                    else:
+                        st.error("Received empty audio features list.")
+                except Exception as e:
+                    st.error("Error fetching audio features:")
+                    st.exception(e)
+                    st.stop()
     else:
         st.error("Access token is missing or invalid. Please re-authenticate.")
-
 # --- Exportify Upload ---
 uploaded_files = st.file_uploader(
     "Upload one or more Exportify playlist files (CSV or Excel)",
