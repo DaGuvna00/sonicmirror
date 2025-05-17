@@ -41,10 +41,10 @@ st.markdown(f"[🔐 Log in with Spotify]({auth_url})")
 code = st.query_params.get("code")
 
 if code:
-token_info = sp_oauth.get_access_token(code)
+    token_info = sp_oauth.get_access_token(code)
 if token_info:
-access_token = token_info['access_token']
-sp = spotipy.Spotify(auth=access_token)
+    access_token = token_info['access_token']
+    sp = spotipy.Spotify(auth=access_token)
 
 ```
     user = sp.current_user()
