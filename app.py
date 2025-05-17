@@ -39,17 +39,13 @@ st.write("🔍 Debug: query_params", query_params)
 st.write("🔍 Debug: code", code)
 st.write("🔍 Debug: session_state", dict(st.session_state))
 
-# Step 3: Save code into session and clear URL
-if code and "auth_code" not in st.session_state:
-    st.session_state["auth_code"] = code
-    st.query_params = {}  # clear it only once
-
-# Step 4: Exchange auth_code for token
-if "auth_code" in st.session_state and "token_info" not in st.session_state:
+# Step 3–4: Exchange code for token immediately (only once)
+if code and "token_info" not in st.session_state:
     try:
-        token_info = sp_oauth.get_access_token(st.session_state["auth_code"], as_dict=True)
+        token_info = sp_oauth.get_access_token(code, as_dict=True)
         if token_info and token_info.get("access_token"):
             st.session_state["token_info"] = token_info
+            st.query_params = {}  # Clear code from URL immediately
         else:
             st.error("Failed to get Spotify token. Please log in again.")
             st.stop()
