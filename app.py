@@ -46,7 +46,6 @@ if token_info:
     access_token = token_info['access_token']
     sp = spotipy.Spotify(auth=access_token)
 
-```
     user = sp.current_user()
     st.success(f"Logged in as {user['display_name']}")
 
