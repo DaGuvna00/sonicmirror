@@ -8,63 +8,99 @@ from spotipy.oauth2 import SpotifyOAuth, SpotifyOauthError
 
 # --- Streamlit Setup ---
 st.set_page_config(page_title="SonicMirror - Playlist Analyzer", layout="wide")
-st.title("🎶 SonicMirror – Analyze Your Spotify Playlists")
 
-# --- Spotify Auth Setup ---
+# --- Spotify OAuth setup ---
 SPOTIPY_CLIENT_ID     = st.secrets["SPOTIPY_CLIENT_ID"]
 SPOTIPY_CLIENT_SECRET = st.secrets["SPOTIPY_CLIENT_SECRET"]
 SPOTIPY_REDIRECT_URI  = "https://sonicmirror.streamlit.app"
-scope = "playlist-read-private playlist-read-collaborative"
+SCOPE = "playlist-read-private playlist-read-collaborative"
 
 sp_oauth = SpotifyOAuth(
     client_id=SPOTIPY_CLIENT_ID,
     client_secret=SPOTIPY_CLIENT_SECRET,
     redirect_uri=SPOTIPY_REDIRECT_URI,
-    scope=scope,
+    scope=SCOPE,
     show_dialog=True
 )
 
-# 1) Show the “Log in with Spotify” link
+# ----------------------------------------------------------------
+# Step 0: If we already have a token in state, skip straight to playlists
+# ----------------------------------------------------------------
+if "token_info" in st.session_state:
+    token_info = st.session_state.token_info
+    access_token = (
+        token_info["access_token"]
+        if isinstance(token_info, dict)
+        else token_info
+    )
+    sp = spotipy.Spotify(auth=access_token)
+
+    # (Re-)refresh if needed
+    if isinstance(token_info, dict) and sp_oauth.is_token_expired(token_info):
+        token_info = sp_oauth.refresh_access_token(token_info["refresh_token"])
+        st.session_state.token_info = token_info
+        access_token = token_info["access_token"]
+        sp = spotipy.Spotify(auth=access_token)
+
+    # Logged‐in UI
+    st.title("🎶 SonicMirror – Analyze Your Spotify Playlists")
+    try:
+        user = sp.current_user()
+        st.success(f"✅ Logged in as {user['display_name']}")
+    except Exception as e:
+        st.error("Failed to fetch user profile.")
+        st.exception(e)
+        st.stop()
+
+    # --- YOUR PLAYLIST + UPLOAD + CHARTING CODE HERE ---
+    # e.g.:
+    playlists = sp.current_user_playlists(limit=50)["items"]
+    names = [pl["name"] for pl in playlists]
+    ids   = [pl["id"]   for pl in playlists]
+    choice = st.selectbox("🎧 Choose a Playlist", [""] + names)
+    # … rest of your data‐fetch + plotting …
+
+    st.stop()  # nothing below runs
+
+# ----------------------------------------------------------------
+# Step 1: Show login link (we don’t have token_info yet)
+# ----------------------------------------------------------------
+st.title("🎶 SonicMirror – Analyze Your Spotify Playlists")
 auth_url = sp_oauth.get_authorize_url()
 st.markdown(f"[🔐 Log in with Spotify]({auth_url})")
 
-# 2) Grab the ?code= query param
-query_params = st.query_params
-code = query_params.get("code", [None])[0]
+# Step 2: Grab the incoming code, if any
+code = st.query_params.get("code", [None])[0]
 
-# 3) (Optional) Debug view
-st.write("🔍 query_params:", query_params)
-st.write("🔍 code:", code)
-st.write("🔍 session_state keys:", list(st.session_state.keys()))
-
-# 4) Exchange code for token (only once)
-if code and "token_info" not in st.session_state:
+# Step 3: Exchange it for a token, store it, then clear & rerun
+if code:
     try:
         raw = sp_oauth.get_access_token(code)  # no more as_dict=True
         if isinstance(raw, dict):
             token_info = raw
-            access_token = token_info.get("access_token")
         else:
-            access_token = raw
-            token_info = {"access_token": access_token}
+            token_info = {"access_token": raw}
 
-        if not access_token:
-            raise RuntimeError("No access token returned by Spotify")
+        if "access_token" not in token_info:
+            raise RuntimeError("Spotify did not return an access_token")
 
+        # **persist** and **clear the URL** so this block only ever runs once
         st.session_state.token_info = token_info
-        # Clear the URL so we don’t keep retrying the same code
-        st.query_params = {}
-        st.rerun()  # ← use st.rerun() instead of experimental_rerun :contentReference[oaicite:0]{index=0}
+        st.query_params.clear()       # properly wipe the ?code=
+        st.rerun()                    # fresh run into the playlists block
 
     except SpotifyOauthError as e:
         if "invalid_grant" in str(e):
-            st.warning("❗️ Authorization code expired or invalid. Redirecting to login…")
-            st.query_params = {}
-            st.rerun()  # ← same replacement here :contentReference[oaicite:1]{index=1}
+            st.warning("❗️ Code expired or already used. Please log in again.")
+            st.query_params.clear()
+            st.rerun()
         else:
             st.error("Spotify token exchange failed.")
             st.exception(e)
             st.stop()
+
+# If we get here, either no code param (first visit), or exchange is in progress.
+# We simply render the login link and wait.
 
 # 5) Refresh token if expired
 if "token_info" in st.session_state:
