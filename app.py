@@ -322,7 +322,9 @@ if genius_token:
     sentiment_data = []
     tracks_unique = df[['Track','Artist','Playlist']].drop_duplicates().to_dict(orient='records')
     with st.spinner("Fetching lyrics and computing sentiment…"):
-        for entry in tracks_unique:
+        total = len(tracks_unique)
+        bar = st.progress(0)
+        for idx, entry in enumerate(tracks_unique):
             title = re.sub(r"\s*-\s*.*remix$", "", entry['Track'], flags=re.IGNORECASE)
             title = re.sub(r"\(.*?\)", "", title).strip()
             artist = entry['Artist'].split(',')[0]
