@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from wordcloud import WordCloud
 import spotipy
-from spotipy.oauth2 import SpotifyOAuth
+from spotipy.oauth2 import SpotifyOAuth, SpotifyOauthError
 
 # ─── Page config ───
 st.set_page_config(page_title="SonicMirror – Playlist Analyzer", layout="wide")
@@ -25,22 +25,34 @@ sp_oauth = SpotifyOAuth(
 
 # ─── Authentication helper ───
 def get_token():
+    # Try session or cache
     token_info = st.session_state.get("token_info") or sp_oauth.get_cached_token()
     params = st.query_params
     code_list = params.get("code")
+
     if code_list:
         code = code_list[0]
-        raw = sp_oauth.get_access_token(code)
-        token_info = raw if isinstance(raw, dict) else {"access_token": raw}
-        st.session_state["token_info"] = token_info
+        try:
+            raw = sp_oauth.get_access_token(code)
+            token_info = raw if isinstance(raw, dict) else {"access_token": raw}
+            st.session_state["token_info"] = token_info
+        except SpotifyOauthError:
+            st.error("⚠️ Spotify authorization failed. Please log in again.")
+            # Clear any invalid tokens
+            st.session_state.pop("token_info", None)
+        # Clean URL params and rerun
         st.query_params = {}
         st.rerun()
+
+    # Refresh if expired
     if token_info and sp_oauth.is_token_expired(token_info):
         token_info = sp_oauth.refresh_access_token(token_info["refresh_token"])
         st.session_state["token_info"] = token_info
+
     return token_info
 
 # ─── Main flow ───
+
 token_info = get_token()
 if not token_info:
     st.title("SonicMirror – Log in with Spotify")
@@ -48,9 +60,10 @@ if not token_info:
     st.markdown(f"[🔐 Log in with Spotify]({auth_url})")
     st.stop()
 
+# Authenticated client
 sp = spotipy.Spotify(auth=token_info["access_token"])
 user = sp.current_user()
-st.sidebar.markdown(f"**Logged in as:** {user.get('display_name')} ({user.get('id')})")
+st.sidebar.markdown(f"**Logged in as:** {user.get('display_name', '')} ({user.get('id', '')})")
 
 # ─── Playlist selection ───
 playlists = sp.current_user_playlists(limit=50).get('items', [])
@@ -66,17 +79,17 @@ if selected:
         results = sp.playlist_items(pid, additional_types=['track'])
         while results:
             for item in results['items']:
-                track = item.get('track')
-                if track:
-                    tracks.append(track)
+                t = item.get('track')
+                if t:
+                    tracks.append(t)
             results = sp.next(results) if results.get('next') else None
-        # Batch audio features (max 100 IDs per request)
+        # Batch audio features
         ids = [t['id'] for t in tracks if t.get('id')]
         features = {}
         for i in range(0, len(ids), 100):
             batch = ids[i:i+100]
-            batch_feats = sp.audio_features(batch)
-            for f in batch_feats or []:
+            batch_feats = sp.audio_features(batch) or []
+            for f in batch_feats:
                 if f and f.get('id'):
                     features[f['id']] = f
         # Build rows
@@ -86,7 +99,7 @@ if selected:
             all_tracks.append({
                 'Playlist': name,
                 'Track Name': t.get('name'),
-                'Artist': ', '.join([a['name'] for a in t.get('artists', [])]),
+                'Artist': ', '.join(a['name'] for a in t.get('artists', [])),
                 'Energy': af.get('energy'),
                 'Valence': af.get('valence'),
                 'Danceability': af.get('danceability'),
@@ -102,6 +115,7 @@ if selected:
     st.subheader("📋 Playlist Overview")
     st.write(f"**Tracks loaded:** {len(df)}")
     st.dataframe(df.head())
+
 # 7) Handle Exportify file uploads
 uploaded = st.file_uploader(
     "Upload Exportify playlist files (CSV/XLSX)", 
