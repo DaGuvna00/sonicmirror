@@ -15,44 +15,50 @@ CLIENT_SECRET = st.secrets["SPOTIPY_CLIENT_SECRET"]
 REDIRECT_URI  = "https://sonicmirror.streamlit.app"
 SCOPE         = "user-read-private playlist-read-private playlist-read-collaborative"
 
+# Use an in-memory cache to avoid file-based caching loops
+from spotipy.cache_handler import MemoryCacheHandler
+cache = MemoryCacheHandler()
 sp_oauth = SpotifyOAuth(
     client_id=CLIENT_ID,
     client_secret=CLIENT_SECRET,
     redirect_uri=REDIRECT_URI,
     scope=SCOPE,
-    show_dialog=True
+    show_dialog=True,
+    cache_handler=cache
 )
 
 # ─── Authentication helper ───
 def get_token():
-    # Try session or cache
-    token_info = st.session_state.get("token_info") or sp_oauth.get_cached_token()
-    params = st.query_params
-    code_list = params.get("code")
+    # 1) Return session token if available
+    if "token_info" in st.session_state:
+        token_info = st.session_state.token_info
+    else:
+        token_info = None
 
-    if code_list:
-        code = code_list[0]
+    # 2) If redirected from Spotify with code, exchange it
+    code = st.query_params.get("code", [None])[0]
+    if code:
         try:
-            raw = sp_oauth.get_access_token(code)
-            token_info = raw if isinstance(raw, dict) else {"access_token": raw}
-            st.session_state["token_info"] = token_info
+            raw = sp_oauth.get_access_token(code, as_dict=True)
+            token_info = raw
+            st.session_state.token_info = token_info
         except SpotifyOauthError:
-            st.error("⚠️ Spotify authorization failed. Please log in again.")
-            # Clear any invalid tokens
+            st.error("⚠️ Spotify authorization failed. Please try logging in again.")
             st.session_state.pop("token_info", None)
-        # Clean URL params and rerun
+            token_info = None
+        # clear ?code and rerun
         st.query_params = {}
         st.rerun()
 
-    # Refresh if expired
+    # 3) Refresh if expired
     if token_info and sp_oauth.is_token_expired(token_info):
-        token_info = sp_oauth.refresh_access_token(token_info["refresh_token"])
-        st.session_state["token_info"] = token_info
+        refreshed = sp_oauth.refresh_access_token(token_info["refresh_token"])
+        token_info = refreshed
+        st.session_state.token_info = token_info
 
     return token_info
 
 # ─── Main flow ───
-
 token_info = get_token()
 if not token_info:
     st.title("SonicMirror – Log in with Spotify")
@@ -63,7 +69,7 @@ if not token_info:
 # Authenticated client
 sp = spotipy.Spotify(auth=token_info["access_token"])
 user = sp.current_user()
-st.sidebar.markdown(f"**Logged in as:** {user.get('display_name', '')} ({user.get('id', '')})")
+st.sidebar.markdown(f"**Logged in as:** {user.get('display_name','')} ({user.get('id','')})")
 
 # ─── Playlist selection ───
 playlists = sp.current_user_playlists(limit=50).get('items', [])
@@ -76,23 +82,24 @@ if selected:
     for name in selected:
         pid = options[name]
         tracks = []
-        results = sp.playlist_items(pid, additional_types=['track'])
+        results = sp.playlist_items(pid)
         while results:
             for item in results['items']:
                 t = item.get('track')
                 if t:
                     tracks.append(t)
             results = sp.next(results) if results.get('next') else None
-        # Batch audio features
+
+        # Batch fetch audio features
         ids = [t['id'] for t in tracks if t.get('id')]
         features = {}
         for i in range(0, len(ids), 100):
             batch = ids[i:i+100]
-            batch_feats = sp.audio_features(batch) or []
-            for f in batch_feats:
+            for f in sp.audio_features(batch) or []:
                 if f and f.get('id'):
                     features[f['id']] = f
-        # Build rows
+
+        # Build DataFrame rows
         for t in tracks:
             fid = t.get('id')
             af = features.get(fid, {})
@@ -111,10 +118,15 @@ if selected:
                 'Loudness': af.get('loudness'),
                 'Key': af.get('key')
             })
+
     df = pd.DataFrame(all_tracks)
     st.subheader("📋 Playlist Overview")
     st.write(f"**Tracks loaded:** {len(df)}")
     st.dataframe(df.head())
+
+    # ─── Charting section ───
+    # (Paste your mood map, radar, histograms, etc., here.)
+
 
 # 7) Handle Exportify file uploads
 uploaded = st.file_uploader(
