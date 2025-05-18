@@ -318,13 +318,13 @@ genius_token = st.secrets.get("GENIUS_TOKEN")
 if genius_token:
     try:
         import lyricsgenius
-            try:
-                from textblob import download_corpora
+        try:
+            from textblob import download_corpora
                 # Download necessary corpora at runtime on Streamlit Cloud
-                download_corpora.download_all()
-            except Exception:
-                pass
-            from textblob import TextBlob
+            download_corpora.download_all()
+        except Exception:
+            pass
+        from textblob import TextBlob
         st.error("Please install 'lyricsgenius' and 'textblob' to enable sentiment analysis.")
     else:
         genius = lyricsgenius.Genius(genius_token, skip_non_songs=True, excluded_terms=["(Remix)"])
