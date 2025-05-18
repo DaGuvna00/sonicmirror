@@ -141,10 +141,43 @@ buf = io.StringIO()
 df.to_csv(buf, index=False)
 st.download_button("Download CSV", buf.getvalue().encode('utf-8'), 'sonicmirror_export.csv')
 
-# ─── Suggested Next Steps ───
-st.header("📝 Insights & Ideas")
-st.markdown("- Analyze lag trends by month/year to see seasonal discovery patterns.")
-st.markdown("- Compare valence vs energy scatter plots for mood mapping.")
-st.markdown("- Integrate genre tags and include genre distribution charts.")
-st.markdown("- Add time-series of added track counts over time.")
+# ─── Valence vs Energy Scatter Plot ───
+st.header("🎨 Valence vs Energy: Mood Mapping")
+fig4, ax4 = plt.subplots()
+for p in selected:
+    subset = df[df['Playlist']==p]
+    ax4.scatter(
+        subset['Valence'], subset['Energy'],
+        alpha=0.6, label=p, s=40
+    )
+ax4.set_xlabel('Valence')
+ax4.set_ylabel('Energy')
+ax4.set_title('Track Mood Distribution by Playlist')
+ax4.legend()
+st.pyplot(fig4)
+
+# ─── Time-Series of Tracks Added ───
+st.header("📈 Tracks Added Over Time")
+# Group by month-year
+df['Month'] = df['AddedAt'].dt.to_period('M').dt.to_timestamp()
+time_data = df.groupby(['Month','Playlist']).size().reset_index(name='Count')
+fig5, ax5 = plt.subplots(figsize=(10,4))
+for p in selected:
+    series = time_data[time_data['Playlist']==p]
+    ax5.plot(series['Month'], series['Count'], marker='o', label=p)
+ax5.set_xlabel('Month')
+ax5.set_ylabel('Number of Tracks Added')
+ax5.set_title('Tracks Added Over Time by Playlist')
+ax5.legend()
+st.pyplot(fig5)
+
+# ─── Seasonal Trend Analysis ───
+st.header("🌦 Seasonal Additions by Month")
+# Extract month name
+df['MonthName'] = df['AddedAt'].dt.month_name()
+season_data = df.groupby(['MonthName','Playlist']).size().unstack(fill_value=0)
+# Ensure month order
+months = ['January','February','March','April','May','June','July','August','September','October','November','December']
+season_data = season_data.reindex(months)
+st.dataframe(season_data)
 
