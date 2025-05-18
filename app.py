@@ -24,10 +24,15 @@ sp_oauth = SpotifyOAuth(
 )
 
 # ----------------------------------------------------------------
-# Step 0: If we already have a token in state, skip straight to playlists
+# If we're already authenticated, skip straight to the main UI
 # ----------------------------------------------------------------
 if "token_info" in st.session_state:
     token_info = st.session_state.token_info
+    # Refresh if needed
+    if isinstance(token_info, dict) and sp_oauth.is_token_expired(token_info):
+        token_info = sp_oauth.refresh_access_token(token_info["refresh_token"])
+        st.session_state.token_info = token_info
+
     access_token = (
         token_info["access_token"]
         if isinstance(token_info, dict)
@@ -35,44 +40,29 @@ if "token_info" in st.session_state:
     )
     sp = spotipy.Spotify(auth=access_token)
 
-    # (Re-)refresh if needed
-    if isinstance(token_info, dict) and sp_oauth.is_token_expired(token_info):
-        token_info = sp_oauth.refresh_access_token(token_info["refresh_token"])
-        st.session_state.token_info = token_info
-        access_token = token_info["access_token"]
-        sp = spotipy.Spotify(auth=access_token)
-
-    # Logged‐in UI
     st.title("🎶 SonicMirror – Analyze Your Spotify Playlists")
     try:
         user = sp.current_user()
         st.success(f"✅ Logged in as {user['display_name']}")
     except Exception as e:
-        st.error("Failed to fetch user profile.")
+        st.error("Failed to fetch Spotify user profile.")
         st.exception(e)
         st.stop()
 
-    # --- YOUR PLAYLIST + UPLOAD + CHARTING CODE HERE ---
-    # e.g.:
-    playlists = sp.current_user_playlists(limit=50)["items"]
-    names = [pl["name"] for pl in playlists]
-    ids   = [pl["id"]   for pl in playlists]
-    choice = st.selectbox("🎧 Choose a Playlist", [""] + names)
-    # … rest of your data‐fetch + plotting …
-
-    st.stop()  # nothing below runs
+    # ——— your playlist‐fetching, Excel‐upload, and charting code here ———
+    st.write("… now show playlists, audio features, charts, etc. …")
+    st.stop()
 
 # ----------------------------------------------------------------
-# Step 1: Show login link (we don’t have token_info yet)
+# Otherwise: show the login link & handle the redirect
 # ----------------------------------------------------------------
-st.title("🎶 SonicMirror – Analyze Your Spotify Playlists")
+st.title("🔐 SonicMirror – Log in with Spotify")
 auth_url = sp_oauth.get_authorize_url()
-st.markdown(f"[🔐 Log in with Spotify]({auth_url})")
+st.markdown(f"[Click here to log in with Spotify]({auth_url})")
 
-# Step 2: Grab the incoming code, if any
+# 1) Read the incoming code from the URL
 code = st.query_params.get("code", [None])[0]
 
-# Step 3: Exchange it for a token, store it, then clear & rerun
 if code:
     try:
         raw = sp_oauth.get_access_token(code)  # no more as_dict=True
@@ -82,25 +72,25 @@ if code:
             token_info = {"access_token": raw}
 
         if "access_token" not in token_info:
-            raise RuntimeError("Spotify did not return an access_token")
+            raise RuntimeError("No access_token in Spotify response")
 
-        # **persist** and **clear the URL** so this block only ever runs once
+        # 2) Persist it, wipe the query‐string _by assigning_, and rerun
         st.session_state.token_info = token_info
-        st.query_params.clear()       # properly wipe the ?code=
-        st.rerun()                    # fresh run into the playlists block
+        st.query_params = {}      # ← this will drop ?code= from the URL
+        st.rerun()                # ← the new way to force Streamlit to restart
 
     except SpotifyOauthError as e:
         if "invalid_grant" in str(e):
-            st.warning("❗️ Code expired or already used. Please log in again.")
-            st.query_params.clear()
+            st.warning("❗ Authorization code expired/invalid. Please click login again.")
+            st.query_params = {}
             st.rerun()
         else:
             st.error("Spotify token exchange failed.")
             st.exception(e)
             st.stop()
 
-# If we get here, either no code param (first visit), or exchange is in progress.
-# We simply render the login link and wait.
+# If we get here, either there's no code yet (first visit),
+# or we just rendered the login link and are waiting for the redirect.
 
 # 5) Refresh token if expired
 if "token_info" in st.session_state:
