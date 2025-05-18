@@ -181,3 +181,62 @@ months = ['January','February','March','April','May','June','July','August','Sep
 season_data = season_data.reindex(months)
 st.dataframe(season_data)
 
+# ─── Valence vs Energy Scatter Plot ───
+st.header("🎨 Valence vs Energy: Mood Mapping")
+fig4, ax4 = plt.subplots()
+for p in selected:
+    subset = df[df['Playlist']==p]
+    ax4.scatter(
+        subset['Valence'], subset['Energy'],
+        alpha=0.6, label=p, s=40
+    )
+ax4.set_xlabel('Valence')
+ax4.set_ylabel('Energy')
+ax4.set_title('Track Mood Distribution by Playlist')
+ax4.legend()
+st.pyplot(fig4)
+
+# ─── Time-Series of Tracks Added ───
+st.header("📈 Tracks Added Over Time")
+# Group by month-year
+df['Month'] = df['AddedAt'].dt.to_period('M').dt.to_timestamp()
+time_data = df.groupby(['Month','Playlist']).size().reset_index(name='Count')
+fig5, ax5 = plt.subplots(figsize=(10,4))
+for p in selected:
+    series = time_data[time_data['Playlist']==p]
+    ax5.plot(series['Month'], series['Count'], marker='o', label=p)
+ax5.set_xlabel('Month')
+ax5.set_ylabel('Number of Tracks Added')
+ax5.set_title('Tracks Added Over Time by Playlist')
+ax5.legend()
+st.pyplot(fig5)
+
+# ─── Seasonal Trend Analysis ───
+st.header("🌦 Seasonal Additions by Month")
+# Extract month name
+df['MonthName'] = df['AddedAt'].dt.month_name()
+season_data = df.groupby(['MonthName','Playlist']).size().unstack(fill_value=0)
+# Ensure month order
+months = ['January','February','March','April','May','June','July','August','September','October','November','December']
+season_data = season_data.reindex(months)
+st.dataframe(season_data)
+
+# ─── Genre & Subgenre Breakdown ───
+import re
+st.header("🎼 Genre Breakdown")
+# split multiple genres per track into a flat list
+genre_series = df['Genres'].dropna().astype(str)
+all_genres = genre_series.apply(lambda s: [g.strip() for g in re.split(r"[;,]", s) if g.strip()]).explode()
+genre_counts = all_genres.value_counts().rename_axis('Genre').reset_index(name='Count')
+# display top genres
+top_n = st.slider("Number of top genres to display", min_value=5, max_value=20, value=10)
+top_genres = genre_counts.head(top_n)
+st.subheader(f"Top {top_n} Genres")
+st.dataframe(top_genres)
+
+# bar chart
+fig_genre, ax_genre = plt.subplots()
+ax_genre.barh(top_genres['Genre'][::-1], top_genres['Count'][::-1])
+ax_genre.set_xlabel('Count')
+ax_genre.set_title('Top Genres in Your Playlists')
+st.pyplot(fig_genre)
