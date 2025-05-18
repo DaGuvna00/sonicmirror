@@ -23,79 +23,36 @@ sp_oauth = SpotifyOAuth(
     show_dialog=True
 )
 
-# ─── 1) If we already have a token, go straight to the main UI ───
+# ─── 1) If we’ve just been redirected from Spotify with a code, exchange it ───
+code = st.query_params.get("code", [None])[0]
+if code and "token_info" not in st.session_state:
+    try:
+        # get the full dict so we have refresh_token, expires_at, etc.
+        token_info = sp_oauth.get_access_token(code, as_dict=True)
+        if "access_token" not in token_info:
+            raise RuntimeError("Spotify did not return an access token")
+        st.session_state.token_info = token_info
+
+        # wipe the ?code= from the URL and restart
+        st.query_params = {}
+        st.rerun()
+
+    except SpotifyOauthError as e:
+        # bad or already-used code
+        st.warning("❗️ Authorization code invalid or expired. Please click the login link again.")
+        st.query_params = {}
+        st.rerun()
+    except Exception as e:
+        st.error("Error exchanging code for token:")
+        st.exception(e)
+        st.stop()
+
+# ─── 2) If we have a token in state, refresh if needed and then show the main UI ───
 if "token_info" in st.session_state:
     token_info = st.session_state.token_info
 
     # refresh if expired
     if sp_oauth.is_token_expired(token_info):
-        token_info = sp_oauth.refresh_access_token(token_info["refresh_token"])
-        st.session_state.token_info = token_info
-
-    # build your Spotify client
-    sp = spotipy.Spotify(auth=token_info["access_token"])
-
-    # ——— Logged-in UI starts here ———
-    st.title("🎶 SonicMirror – Analyze Your Spotify Playlists")
-    try:
-        user = sp.current_user()
-        st.success(f"✅ Logged in as {user['display_name']}")
-    except Exception as e:
-        st.error("Could not fetch your profile.")
-        st.exception(e)
-        st.stop()
-
-    # — your existing playlist‐fetching & chart code —
-    playlists = sp.current_user_playlists(limit=50)["items"]
-    names     = [pl["name"] for pl in playlists]
-    ids       = [pl["id"]   for pl in playlists]
-    choice    = st.selectbox("🎧 Choose a Playlist", [""] + names)
-
-    if choice:
-        pid = ids[names.index(choice)]
-        items = sp.playlist_tracks(pid)["items"]
-        # … (build your DataFrame, charts, etc.) …
-
-    # Exit so we don’t render the login UI below
-    st.stop()
-
-# ─── 2) Otherwise: show the “Log in with Spotify” link ───
-st.title("SonicMirror – Log in with Spotify")
-auth_url = sp_oauth.get_authorize_url()
-st.markdown(f"[🔐 Click here to log in with Spotify]({auth_url})")
-
-# ─── 3) Catch the redirect back with ?code=… ───
-code = st.query_params.get("code", [None])[0]
-if code:
-    try:
-        # get the full token_info dict
-        token_info = sp_oauth.get_access_token(code, as_dict=True)
-        if "access_token" not in token_info:
-            raise RuntimeError("Spotify did not return an access token")
-
-        # persist it, wipe the URL, and rerun into branch #1
-        st.session_state.token_info = token_info
-        st.query_params = {}    # clears out ?code=…
-        st.rerun()
-
-    except SpotifyOauthError as e:
-        # handle an already-used/expired code
-        st.warning("❗️ Invalid or expired code; please log in again.")
-        st.query_params = {}
-        st.rerun()
-    except Exception as e:
-        st.error("Unexpected error while exchanging code for token.")
-        st.exception(e)
-        st.stop()
-
-
-# If we get here, either there's no code yet (first visit),
-# or we just rendered the login link and are waiting for the redirect.
-
-# 5) Refresh token if expired
-if "token_info" in st.session_state:
-    token_info = st.session_state.token_info
-    if isinstance(token_info, dict) and sp_oauth.is_token_expired(token_info):
         try:
             token_info = sp_oauth.refresh_access_token(token_info["refresh_token"])
             st.session_state.token_info = token_info
@@ -104,49 +61,58 @@ if "token_info" in st.session_state:
             st.exception(e)
             st.stop()
 
-    # 6) Initialize Spotipy client
-    access_token = (
-        token_info["access_token"]
-        if isinstance(token_info, dict)
-        else token_info
-    )
-    sp = spotipy.Spotify(auth=access_token)
+    # build the Spotify client
+    sp = spotipy.Spotify(auth=token_info["access_token"])
 
+    # ——— Logged-in UI ———
+    st.title("🎶 SonicMirror – Analyze Your Spotify Playlists")
     try:
         user = sp.current_user()
         st.success(f"✅ Logged in as {user['display_name']}")
     except Exception as e:
-        st.error("Failed to fetch Spotify user profile.")
+        st.error("Could not fetch your Spotify profile.")
         st.exception(e)
+        st.stop()
 
-    # --- Playlist Selection & Feature Fetching ---
+    # — your playlist‐fetching & chart code goes here —
     playlists = sp.current_user_playlists(limit=50)["items"]
-    names = [pl["name"] for pl in playlists]
-    ids   = [pl["id"]   for pl in playlists]
-    choice = st.selectbox("🎧 Choose a Playlist", [""] + names)
+    names     = [pl["name"] for pl in playlists]
+    ids       = [pl["id"]   for pl in playlists]
+    choice    = st.selectbox("🎧 Choose a Playlist", [""] + names)
 
     if choice:
-        pid = ids[names.index(choice)]
+        pid   = ids[names.index(choice)]
         items = sp.playlist_tracks(pid)["items"]
-        ids_, names_, artists_ = [], [], []
+        track_ids, track_names, artists = [], [], []
 
         for item in items:
-            t = item.get("track", {})
+            t = item.get("track")
             if t and t.get("id") and t.get("is_playable", True):
-                ids_.append(t["id"])
-                names_.append(t["name"])
-                artists_.append(", ".join(a["name"] for a in t["artists"]))
+                track_ids.append(t["id"])
+                track_names.append(t["name"])
+                artists.append(", ".join(a["name"] for a in t["artists"]))
 
-        if ids_:
-            feats = sp.audio_features(ids_)
-            if feats:
-                df = pd.DataFrame(feats)
-                df["Track Name"]     = names_
-                df["Artist Name(s)"] = artists_
-                df["Playlist"]       = choice
-                st.session_state.setdefault("all_dfs", []).append(df)
-            else:
-                st.error("No audio features returned.")
+        if track_ids:
+            feats = sp.audio_features(track_ids)
+            df = pd.DataFrame(feats).dropna(subset=["id"])
+            df["Track Name"]     = track_names
+            df["Artist Name(s)"] = artists
+            df["Playlist"]       = choice
+
+            st.subheader("📋 Playlist Overview")
+            st.write(f"Tracks loaded: {len(df)}")
+            st.dataframe(df[["Track Name","Artist Name(s)"]].head())
+
+            # … the rest of your plotting logic …
+
+    # once you’ve shown the logged-in UI, stop the script so we never fall back to the login link
+    st.stop()
+
+# ─── 3) Otherwise, we’re neither authenticated nor in the middle of an exchange, so show login link ───
+st.title("SonicMirror – Log in with Spotify")
+auth_url = sp_oauth.get_authorize_url()
+st.markdown(f"[🔐 Click here to log in with Spotify]({auth_url})")
+
 
 # 7) Handle Exportify file uploads
 uploaded = st.file_uploader(
