@@ -24,51 +24,49 @@ sp_oauth = SpotifyOAuth(
     show_dialog=True
 )
 
-# Generate & show the auth URL
+# 1) Show the “Log in with Spotify” link
 auth_url = sp_oauth.get_authorize_url()
 st.markdown(f"[🔐 Log in with Spotify]({auth_url})")
 
-# Storage for all dataframes
-all_dfs = []
-
-# 1) Grab the ?code= query param
-query_params = st.experimental_get_query_params()
+# 2) Grab the ?code= query param
+query_params = st.query_params
 code = query_params.get("code", [None])[0]
 
-# 2) Debug output (optional)
+# 3) (Optional) Debug view
 st.write("🔍 query_params:", query_params)
 st.write("🔍 code:", code)
 st.write("🔍 session_state:", dict(st.session_state))
 
-# 3) Exchange code for token (only once)
+# 4) Exchange code for token (only once)
 if code and "token_info" not in st.session_state:
     try:
-        raw = sp_oauth.get_access_token(code)   # no more as_dict=True
-        # handle both dict-style (old) and string-style (future)
+        # No more as_dict=True
+        raw = sp_oauth.get_access_token(code)
         if isinstance(raw, dict):
             token_info = raw
             access_token = token_info.get("access_token")
         else:
             access_token = raw
             token_info = {"access_token": access_token}
+
         if not access_token:
-            raise RuntimeError("No access_token in response")
-        # store and clear the URL
+            raise RuntimeError("No access token returned by Spotify")
+
         st.session_state.token_info = token_info
-        st.experimental_set_query_params()  # clear ?code
+        # Clear the URL so we don’t keep using the code
+        st.query_params = {}
         st.experimental_rerun()
     except Exception as e:
         st.error("Spotify token exchange failed.")
         st.exception(e)
         st.stop()
 
-# 4) Refresh if expired
+# 5) Refresh token if expired
 if "token_info" in st.session_state:
     token_info = st.session_state.token_info
-    # Spotipy’s is_token_expired currently expects the dict format
+    # Spotipy’s is_token_expired expects a dict
     if isinstance(token_info, dict) and sp_oauth.is_token_expired(token_info):
         try:
-            # refresh_access_token returns a dict
             token_info = sp_oauth.refresh_access_token(token_info["refresh_token"])
             st.session_state.token_info = token_info
         except Exception as e:
@@ -76,115 +74,80 @@ if "token_info" in st.session_state:
             st.exception(e)
             st.stop()
 
-    # 5) Use the token
+    # 6) Use the token to initialize Spotipy client
     access_token = (
         token_info["access_token"]
         if isinstance(token_info, dict)
         else token_info
     )
     sp = spotipy.Spotify(auth=access_token)
+
     try:
         user = sp.current_user()
         st.success(f"✅ Logged in as {user['display_name']}")
     except Exception as e:
-        st.error("Failed to fetch user profile.")
+        st.error("Failed to fetch Spotify user profile.")
         st.exception(e)
 
-    # --- now you can list playlists, fetch tracks, features, etc. ---
+    # --- Playlist Selection & Feature Fetching ---
+    playlists = sp.current_user_playlists(limit=50)
+    names = [pl["name"] for pl in playlists["items"]]
+    ids   = [pl["id"]   for pl in playlists["items"]]
+    choice = st.selectbox("🎧 Choose a Playlist", names)
 
-# … the rest of your playlist‐loading and charting code unchanged …
+    if choice:
+        pid = ids[names.index(choice)]
+        tracks = sp.playlist_tracks(pid)["items"]
+        track_ids = []
+        track_names = []
+        artists = []
 
+        for item in tracks:
+            t = item["track"]
+            if t and t.get("id") and t.get("is_playable", True):
+                track_ids.append(t["id"])
+                track_names.append(t["name"])
+                artists.append(", ".join(a["name"] for a in t["artists"]))
 
-    # Step 6: Confirm successful login and get user profile
-    access_token = st.session_state["token_info"].get("access_token")
-    if access_token:
-        try:
-            sp = spotipy.Spotify(auth=access_token)
-            st.write("🔍 Access token preview:", access_token[:10] + "...")
-            user = sp.current_user()
-            st.write("🧪 User data:", user)
-            st.success(f"✅ Logged in as {user['display_name']}")
-            # TODO: Add playlist interaction below
-        except Exception as e:
-            st.error("Failed to retrieve Spotify user profile.")
-            st.exception(e)
+        if track_ids:
+            af = sp.audio_features(track_ids)
+            if af:
+                df = pd.DataFrame(af)
+                df["Track Name"]    = track_names
+                df["Artist Name(s)"] = artists
+                df["Playlist"]      = choice
+                st.session_state.setdefault("all_dfs", []).append(df)
+            else:
+                st.error("No audio features returned.")
 
-
-        # --- Playlist Selection ---
-        playlists = sp.current_user_playlists(limit=50)
-        playlist_names = [pl['name'] for pl in playlists['items']]
-        playlist_ids = [pl['id'] for pl in playlists['items']]
-
-        selected = st.selectbox("🎧 Choose a Playlist", playlist_names)
-
-        if selected:
-            idx = playlist_names.index(selected)
-            playlist_id = playlist_ids[idx]
-            tracks_data = sp.playlist_tracks(playlist_id)
-
-            track_ids = []
-            track_names = []
-            artists = []
-
-            for item in tracks_data['items']:
-                track = item['track']
-                if track and track['id'] and track.get('is_playable', True) and track['type'] == 'track':
-                    # st.json(track)  # Optional debug
-                    track_ids.append(track['id'])
-                    track_names.append(track['name'])
-                    artists.append(", ".join([a['name'] for a in track['artists']]))
-
-            st.write("Track IDs for audio_features:", track_ids)  # Debug
-
-            if track_ids:
-                try:
-                    audio_features = sp.audio_features(track_ids)
-                    st.write("Audio features fetched successfully.")  # Debug
-                    if audio_features:
-                        df = pd.DataFrame(audio_features)
-                        df["Track Name"] = track_names
-                        df["Artist Name(s)"] = artists
-                        df["Playlist"] = selected
-                        all_dfs.append(df)
-                    else:
-                        st.error("Received empty audio features list.")
-                except Exception as e:
-                    st.error("Error fetching audio features:")
-                    st.exception(e)
-                    st.stop()
-    else:
-        st.error("Access token is missing or invalid. Please re-authenticate.")
-
-# --- Exportify Upload ---
-uploaded_files = st.file_uploader(
-    "Upload one or more Exportify playlist files (CSV or Excel)",
-    type=["xlsx", "xls", "csv"],
+# 7) Handle Exportify file uploads
+uploaded = st.file_uploader(
+    "Upload Exportify playlist files (CSV/XLSX)", 
+    type=["csv","xls","xlsx"], 
     accept_multiple_files=True
 )
 
-if uploaded_files:
-    for file in uploaded_files:
-        filename = file.name.rsplit(".", 1)[0]
-        if file.name.endswith(".csv"):
-            temp_df = pd.read_csv(file)
+if uploaded:
+    for f in uploaded:
+        name = f.name.rsplit(".",1)[0]
+        if f.name.endswith(".csv"):
+            tmp = pd.read_csv(f)
         else:
-            xls = pd.ExcelFile(file)
-            temp_df = pd.concat([xls.parse(sheet) for sheet in xls.sheet_names], ignore_index=True)
+            xls = pd.ExcelFile(f)
+            tmp = pd.concat([xls.parse(s) for s in xls.sheet_names], ignore_index=True)
+        tmp["Playlist"] = name
+        st.session_state.setdefault("all_dfs", []).append(tmp)
 
-        temp_df["Playlist"] = filename
-        all_dfs.append(temp_df)
-
-# --- Chart + Report Section ---
-if all_dfs:
-    df = pd.concat(all_dfs, ignore_index=True)
-    df = df.dropna(subset=["Track Name", "Artist Name(s)"])
-    if "Duration (ms)" in df.columns:
-        df = df[df["Duration (ms)"] > 0]
-
+# 8) If we have any dataframes, build the report
+if "all_dfs" in st.session_state and st.session_state["all_dfs"]:
+    df = pd.concat(st.session_state["all_dfs"], ignore_index=True)
+    df = df.dropna(subset=["Track Name","Artist Name(s)"])
     st.subheader("📋 Playlist Overview")
     st.write(f"**Tracks loaded:** {len(df)}")
-    st.dataframe(df[["Track Name", "Artist Name(s)", "Playlist"] +
-                    [col for col in ["Release Date", "Popularity"] if col in df.columns]].head())
+    st.dataframe(df[["Track Name","Artist Name(s)","Playlist"]].head())
+
+    # … your existing chart/report code here …
+
 
     # 🎛 Averages
     st.subheader("🎛 Key Audio Feature Averages")
