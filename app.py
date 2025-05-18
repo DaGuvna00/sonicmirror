@@ -396,23 +396,7 @@ else:
         st.write(ai_output)
 
 # ─── Core Analytics End: Now optional sentiment behind button ───
-st.header("🎭 Lyrics Sentiment Analysis (Optional)")
-st.info("Lyrics sentiment can take a while—click below to run it after core analytics load.")
-if st.button("💭 Run Lyrics Sentiment Analysis"):
-    genius_token = st.secrets.get("GENIUS_TOKEN")
-    if not genius_token:
-        st.warning("🔑 Add your GENIUS_TOKEN to Streamlit secrets to enable sentiment analysis.")
-    else:
-        import lyricsgenius
-        from textblob import TextBlob, download_corpora
-        # download corpora
-        download_corpora.download_all()
-        genius = lyricsgenius.Genius(genius_token, skip_non_songs=True, excluded_terms=["(Remix)"])
-        tracks_unique = df[['Track','Artist','Playlist']].drop_duplicates().to_dict(orient='records')
-        total = len(tracks_unique)
-        bar = st.progress(0)
-        sentiment_data = []
-      # ─── Lyrics Sentiment Analysis (Optional, Button-Triggered) ───
+# ─── Lyrics Sentiment Analysis (Optional, Button-Triggered) ───
 st.header("🎭 Lyrics Sentiment Analysis (Optional)")
 st.info("Lyrics sentiment can take a while—click below to run it after core analytics load.")
 
