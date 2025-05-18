@@ -8,7 +8,7 @@ st.set_page_config(page_title="SonicMirror", layout="wide")
 CLIENT_ID     = st.secrets["SPOTIPY_CLIENT_ID"]
 CLIENT_SECRET = st.secrets["SPOTIPY_CLIENT_SECRET"]
 # ← Make this the *exact* URL you’re hosting on:
-REDIRECT_URI  = "http://localhost:8501"  
+REDIRECT_URI  = "https://sonicmirror.streamlit.app"  
 SCOPE         = "playlist-read-private playlist-read-collaborative"
 
 sp_oauth = SpotifyOAuth(
