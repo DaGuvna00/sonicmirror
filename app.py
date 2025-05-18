@@ -52,7 +52,6 @@ else:
 st.sidebar.header("🔎 Analysis Options")
 playlist_names = data['Playlist'].unique().tolist()
 selected = st.sidebar.multiselect("Choose playlists to include", playlist_names, default=playlist_names)
-
 features = ['Energy','Valence','Danceability','Acousticness','Instrumentalness','Liveness','Speechiness','Tempo','Loudness']
 selected_feats = st.sidebar.multiselect("Select audio features", features, default=features)
 
@@ -311,55 +310,49 @@ if 'Mode' in df and 'ReleaseDate' in df:
     st.subheader("Major vs. Minor by Release Year")
     figm, axm=plt.subplots(); mc.plot(kind='bar',stacked=True,ax=axm); st.pyplot(figm)
 
-# ─── Dynamic Sentiment Analysis ───
+# ─── Dynamic Sentiment Analysis with Caching ───
 st.header("🎭 Lyrics Sentiment Analysis")
-# Requires a Genius API token stored in Streamlit secrets as GENIUS_TOKEN
 genius_token = st.secrets.get("GENIUS_TOKEN")
 if genius_token:
-    try:
+    tracks_unique = df[['Track','Artist','Playlist']].drop_duplicates().to_dict(orient='records')
+    @st.cache_data(show_spinner=False)
+    def fetch_sentiments(tracks, token):
+        # Lazy download of TextBlob corpora
+        try:
+            from textblob import download_corpora
+            download_corpora.download_all()
+        except:
+            pass
         import lyricsgenius
-        from textblob import download_corpora, TextBlob
-        # Download necessary corpora at runtime on Streamlit Cloud
-        download_corpora.download_all()
-    except ImportError:
-        st.error("Please install 'lyricsgenius' and 'textblob' to enable sentiment analysis.")
-    else:
-        genius = lyricsgenius.Genius(genius_token, skip_non_songs=True, excluded_terms=["(Remix)"])
-        sentiment_data = []
-        tracks_unique = df[['Track','Artist','Playlist']].drop_duplicates().to_dict(orient='records')
-        with st.spinner("Fetching lyrics and analyzing sentiment..."):
-            for entry in tracks_unique:
-                title = entry['Track']
-                artist = entry['Artist'].split(',')[0]
-                playlist = entry['Playlist']
-                try:
-                    song = genius.search_song(title, artist)
-                    lyrics = song.lyrics if song else ""
-                    polarity = TextBlob(lyrics).sentiment.polarity if lyrics else None
-                    sentiment_data.append({
-                        'Playlist': playlist,
-                        'Track': title,
-                        'Artist': artist,
-                        'Polarity': polarity
-                    })
-                except Exception:
-                    # skip failures
-                    continue
-        if sentiment_data:
-            sent_df = pd.DataFrame(sentiment_data).dropna(subset=['Polarity'])
+        from textblob import TextBlob
+        genius = lyricsgenius.Genius(token, skip_non_songs=True, excluded_terms=["(Remix)"])
+        results = []
+        for entry in tracks:
+            song = genius.search_song(entry['Track'], entry['Artist'].split(',')[0])
+            lyrics = song.lyrics if song else ""
+            polarity = TextBlob(lyrics).sentiment.polarity if lyrics else None
+            results.append({
+                'Playlist': entry['Playlist'],
+                'Track': entry['Track'],
+                'Artist': entry['Artist'],
+                'Polarity': polarity
+            })
+        return results
+    if st.button("💭 Analyze Lyrics Sentiment"):
+        with st.spinner("Fetching lyrics and computing sentiment…"):
+            sentiment_data = fetch_sentiments(tracks_unique, genius_token)
+        sent_df = pd.DataFrame(sentiment_data).dropna(subset=['Polarity'])
+        if not sent_df.empty:
             avg_sent = sent_df.groupby('Playlist')['Polarity'].mean().round(3)
-            st.subheader("Average Lyrics Sentiment by Playlist")
             fig_sent, ax_sent = plt.subplots()
             avg_sent.plot(kind='bar', ax=ax_sent)
-            ax_sent.set_ylabel('Polarity')
-            ax_sent.set_title('Sentiment Polarity (TextBlob)')
+            ax_sent.set_ylabel('Polarity'); ax_sent.set_title('Average Lyrics Sentiment')
             st.pyplot(fig_sent)
-            # Top positive/negative
             st.subheader("Top Positive Tracks")
             st.dataframe(sent_df.nlargest(10, 'Polarity').reset_index(drop=True))
             st.subheader("Top Negative Tracks")
             st.dataframe(sent_df.nsmallest(10, 'Polarity').reset_index(drop=True))
         else:
-            st.warning("No sentiment data available.")
+            st.warning("No sentiment data returned.")
 else:
     st.warning("🔑 Add your GENIUS_TOKEN to Streamlit secrets to enable lyrics sentiment analysis.")
