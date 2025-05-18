@@ -1,16 +1,19 @@
 import streamlit as st
 import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+from wordcloud import WordCloud
 import spotipy
-from spotipy.oauth2 import SpotifyOAuth, SpotifyOauthError
+from spotipy.oauth2 import SpotifyOAuth
 
 # ─── Page config ───
-st.set_page_config(page_title="SonicMirror", layout="wide")
+st.set_page_config(page_title="SonicMirror – Playlist Analyzer", layout="wide")
 
 # ─── OAuth settings ───
-CLIENT_ID     = st.secrets["SPOTIPY_CLIENT_ID"]
+CLIENT_ID = st.secrets["SPOTIPY_CLIENT_ID"]
 CLIENT_SECRET = st.secrets["SPOTIPY_CLIENT_SECRET"]
-REDIRECT_URI  = "https://sonicmirror.streamlit.app"
-SCOPE         = "playlist-read-private playlist-read-collaborative"
+REDIRECT_URI = "https://sonicmirror.streamlit.app"
+SCOPE = "user-read-private playlist-read-private playlist-read-collaborative"
 
 sp_oauth = SpotifyOAuth(
     client_id=CLIENT_ID,
@@ -20,76 +23,73 @@ sp_oauth = SpotifyOAuth(
     show_dialog=True
 )
 
-import io
+# ─── Authentication helper ───
+def get_token():
+    # Try loading from session or cache
+    token_info = st.session_state.get("token_info") or sp_oauth.get_cached_token()
 
-# … after you build your DataFrame, e.g. df_tracks …
-if choice:
-    # df_tracks is a DataFrame of whatever columns you want to export
-    st.subheader(f"Tracks in {choice}")
-    st.dataframe(df_tracks)
+    # Check for redirect with code
+    params = st.experimental_get_query_params()
+    if params.get("code"):
+        code = params["code"][0]
+        token_info = sp_oauth.get_access_token(code)
+        st.session_state["token_info"] = token_info
+        # Clear query params and rerun
+        st.experimental_set_query_params()
+        st.experimental_rerun()
 
-    # export as CSV
-    csv_buffer = io.StringIO()
-    df_tracks.to_csv(csv_buffer, index=False)
-    csv_bytes = csv_buffer.getvalue().encode("utf-8")
-
-    st.download_button(
-        label="📥 Download this playlist as CSV",
-        data=csv_bytes,
-        file_name=f"{choice}.csv",
-        mime="text/csv",
-    )
-
-
-# 0) Try loading from Spotipy’s cache first
-if "token_info" not in st.session_state:
-    cached = sp_oauth.get_cached_token()
-    if cached:
-        st.session_state.token_info = cached
-
-# 1) If Spotify just redirected back with a code, exchange it
-code = st.query_params.get("code", [None])[0]
-if code and "token_info" not in st.session_state:
-    try:
-        raw = sp_oauth.get_access_token(code)      # no more as_dict
-        # handle both the old-dict and new-string return
-        if isinstance(raw, dict):
-            token_info = raw
-        else:
-            token_info = {"access_token": raw}
-
-        st.session_state.token_info = token_info
-
-        # clear out ?code= and rerun
-        st.query_params.clear()
-        st.rerun()
-
-    except Exception:
-        st.warning("Auth code invalid/expired. Please log in again.")
-        st.query_params.clear()
-        st.rerun()
-
-# 2) If we now have token_info, go show the logged-in UI
-if "token_info" in st.session_state:
-    token_info = st.session_state.token_info
-
-    # refresh if it’s expired
-    if sp_oauth.is_token_expired(token_info):
+    # Refresh if expired
+    if token_info and sp_oauth.is_token_expired(token_info):
         token_info = sp_oauth.refresh_access_token(token_info["refresh_token"])
-        st.session_state.token_info = token_info
+        st.session_state["token_info"] = token_info
 
-    sp = spotipy.Spotify(auth=token_info["access_token"])
+    return token_info
 
-    # … your existing “✅ logged in as …” + playlist + tracks + charts code …
-
+# ─── Main flow ───
+token_info = get_token()
+if not token_info:
+    st.title("SonicMirror – Log in with Spotify")
+    auth_url = sp_oauth.get_authorize_url()
+    st.markdown(f"[🔐 Log in with Spotify]({auth_url})")
     st.stop()
 
-# 3) Otherwise, show only the login link
-st.title("SonicMirror – Log in with Spotify")
-auth_url = sp_oauth.get_authorize_url()
-st.markdown(f"[🔐 Log in with Spotify]({auth_url})")
+# User is authenticated
+sp = spotipy.Spotify(auth=token_info["access_token"])
 
+# Sidebar user info
+user = sp.current_user()
+st.sidebar.markdown(f"**Logged in as:** {user.get('display_name')} ({user.get('id')})")
 
+# ─── Playlist selection ───
+playlists = sp.current_user_playlists(limit=50).get('items', [])
+options = {p['name']: p['id'] for p in playlists}
+selected = st.multiselect("Select playlist(s)", list(options.keys()))
+
+# ─── Fetch and compile tracks ───
+if selected:
+    all_tracks = []
+    for name in selected:
+        pid = options[name]
+        results = sp.playlist_items(pid, additional_types=['track'])
+        while results:
+            for item in results['items']:
+                track = item.get('track')
+                if track:
+                    all_tracks.append({
+                        'Playlist': name,
+                        'Track Name': track.get('name'),
+                        'Artist': ', '.join([a['name'] for a in track.get('artists', [])]),
+                        'Energy': track['energy'] if 'energy' in track else None,
+                        # add more features if needed
+                    })
+            if results.get('next'):
+                results = sp.next(results)
+            else:
+                results = None
+    df = pd.DataFrame(all_tracks)
+    st.subheader("📋 Playlist Overview")
+    st.write(f"**Tracks loaded:** {len(df)}")
+    st.dataframe(df.head())
 
 # 7) Handle Exportify file uploads
 uploaded = st.file_uploader(
