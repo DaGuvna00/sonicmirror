@@ -292,3 +292,38 @@ if 'Popularity' in df.columns:
     )
 else:
     st.warning("No 'Popularity' column found in your data for popularity analysis.")
+
+# ─── Key & Tempo Trajectory ───
+st.header("🎹 Key & Tempo Trajectory")
+# Running average tempo over time
+if 'Tempo' in df.columns:
+    df_sorted = df.sort_values('AddedAt')
+    df_sorted['TempoRolling'] = df_sorted.groupby('Playlist')['Tempo'].transform(lambda x: x.rolling(window=10, min_periods=1).mean())
+    fig_tempo, ax_tempo = plt.subplots(figsize=(10,4))
+    for p in selected:
+        subset = df_sorted[df_sorted['Playlist']==p]
+        ax_tempo.plot(subset['AddedAt'], subset['TempoRolling'], label=p)
+    ax_tempo.set_xlabel('Added Date')
+    ax_tempo.set_ylabel('Rolling Avg Tempo')
+    ax_tempo.set_title('Tempo Trajectory (10-track Rolling Avg)')
+    ax_tempo.legend()
+    st.pyplot(fig_tempo)
+# Key distribution by year
+if 'Key' in df.columns and 'AddedAt' in df.columns:
+    df['Year'] = df['AddedAt'].dt.year
+    key_map = {0:'C',1:'C♯/D♭',2:'D',3:'D♯/E♭',4:'E',5:'F',6:'F♯/G♭',7:'G',8:'G♯/A♭',9:'A',10:'A♯/B♭',11:'B'}
+    df['KeyName'] = df['Key'].map(key_map)
+    key_counts = df.groupby(['Year','KeyName']).size().unstack(fill_value=0)
+    st.subheader("Key Distribution by Year")
+    st.dataframe(key_counts)
+# Time-series of major vs minor
+if 'Mode' in df.columns and 'AddedAt' in df.columns:
+    df['Year'] = df['AddedAt'].dt.year
+    mode_counts = df.groupby(['Year','Mode']).size().unstack(fill_value=0)
+    st.subheader("Major vs. Minor Tracks Over Time")
+    fig_mode, ax_mode = plt.subplots()
+    mode_counts.plot(kind='bar', stacked=True, ax=ax_mode)
+    ax_mode.set_xlabel('Year')
+    ax_mode.set_ylabel('Track Count')
+    ax_mode.set_title('Major vs Minor Distribution')
+    st.pyplot(fig_mode)
