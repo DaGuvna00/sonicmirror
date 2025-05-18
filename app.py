@@ -267,3 +267,28 @@ ax_sim.set_xticklabels(labels, rotation=90)
 ax_sim.set_yticklabels(labels)
 ax_sim.set_title('Playlist Cosine Similarity')
 st.pyplot(fig_sim)
+
+# ─── Track Popularity & "Hidden Gems" ───
+st.header("⭐ Track Popularity & Hidden Gems")
+if 'Popularity' in df.columns:
+    # Popularity distribution
+    fig_pop, ax_pop = plt.subplots()
+    df['Popularity'].hist(ax=ax_pop, bins=20)
+    ax_pop.set_xlabel('Popularity')
+    ax_pop.set_ylabel('Track Count')
+    ax_pop.set_title('Popularity Distribution')
+    st.pyplot(fig_pop)
+
+    # Hidden gems criteria
+    pop_thresh = st.slider("Max popularity for hidden gems", 0, 100, 30)
+    energy_thresh = st.slider("Min energy for hidden gems", 0.0, 1.0, 0.7, 0.05)
+    gems = df[(df['Popularity'] <= pop_thresh) & (df.get('Energy', 0) >= energy_thresh)]
+    st.subheader(f"Hidden Gems (Pop ≤ {pop_thresh} & Energy ≥ {energy_thresh})")
+    st.dataframe(
+        gems[['Playlist','Track','Artist','Popularity','Energy']]
+        .sort_values(['Energy','Popularity'], ascending=[False, True])
+        .reset_index(drop=True)
+        .head(20)
+    )
+else:
+    st.warning("No 'Popularity' column found in your data for popularity analysis.")
