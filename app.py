@@ -1,15 +1,11 @@
 import streamlit as st
 import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-from wordcloud import WordCloud
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth, SpotifyOauthError
 
-# ─── Streamlit config ───
+# ─── Config ───
 st.set_page_config(page_title="SonicMirror", layout="wide")
 
-# ─── Spotify OAuth settings ───
 CLIENT_ID     = st.secrets["SPOTIPY_CLIENT_ID"]
 CLIENT_SECRET = st.secrets["SPOTIPY_CLIENT_SECRET"]
 REDIRECT_URI  = "https://sonicmirror.streamlit.app"
@@ -23,73 +19,74 @@ sp_oauth = SpotifyOAuth(
     show_dialog=True
 )
 
-# ─── 1) If Spotify just redirected back with a code, exchange it ───
-params = st.experimental_get_query_params()
-code = params.get("code", [None])[0]
-
+# ─── 1) Handle the redirect with ?code=… ───
+code = st.query_params.get("code", [None])[0]      # read via st.query_params :contentReference[oaicite:1]{index=1}
 if code and "token_info" not in st.session_state:
     try:
         token_info = sp_oauth.get_access_token(code, as_dict=True)
-        if "access_token" not in token_info:
-            raise RuntimeError("No access_token returned")
         st.session_state.token_info = token_info
 
-        # **Clear** the `?code=` query param and rerun cleanly
-        st.experimental_set_query_params()
+        # clear the URL so we don’t keep re-using this code
+        st.query_params.clear()                     # clears all params :contentReference[oaicite:2]{index=2}
         st.rerun()
 
     except SpotifyOauthError:
-        st.warning("Auth code invalid/expired. Please log in again.")
-        st.experimental_set_query_params()
+        st.warning("Auth code expired/invalid. Please log in again.")
+        st.query_params.clear()
         st.rerun()
     except Exception as e:
         st.error("Error exchanging code for token:")
         st.exception(e)
         st.stop()
 
-# ─── 2) If we have a token, refresh if needed and show the app ───
+# ─── 2) If we now have a token, show the main UI ───
 if "token_info" in st.session_state:
     token_info = st.session_state.token_info
 
-    # refresh when expired
+    # refresh if needed
     if sp_oauth.is_token_expired(token_info):
-        try:
-            token_info = sp_oauth.refresh_access_token(token_info["refresh_token"])
-            st.session_state.token_info = token_info
-        except Exception as e:
-            st.error("Token refresh failed; please log in again.")
-            st.exception(e)
-            st.stop()
+        token_info = sp_oauth.refresh_access_token(token_info["refresh_token"])
+        st.session_state.token_info = token_info
 
     sp = spotipy.Spotify(auth=token_info["access_token"])
 
-    # ——— Logged-in UI ———
     st.title("🎶 SonicMirror – Analyze Your Spotify Playlists")
-    try:
-        user = sp.current_user()
-        st.success(f"✅ Logged in as {user['display_name']}")
-    except Exception as e:
-        st.error("Could not fetch your Spotify profile.")
-        st.exception(e)
-        st.stop()
+    user = sp.current_user()
+    st.success(f"✅ Logged in as {user['display_name']}")
 
-    # your playlist-loading + chart code here…
+    # fetch playlists
     playlists = sp.current_user_playlists(limit=50)["items"]
     names     = [p["name"] for p in playlists]
     ids       = [p["id"]   for p in playlists]
     choice    = st.selectbox("🎧 Choose a Playlist", [""] + names)
 
     if choice:
-        pid   = ids[names.index(choice)]
-        items = sp.playlist_tracks(pid)["items"]
-        # …build your DataFrame & charts…
+        pid    = ids[names.index(choice)]
+        items  = sp.playlist_tracks(pid)["items"]
+        tracks = []
+        for item in items:
+            t = item.get("track") or {}
+            tracks.append({
+                "Name":   t.get("name"),
+                "Artist": ", ".join(a["name"] for a in t.get("artists", [])),
+                "Album":  t.get("album", {}).get("name"),
+                "Added":  item.get("added_at")
+            })
 
-    st.stop()  # nothing below runs once logged in
+        df = pd.DataFrame(tracks).dropna(subset=["Name"])
+        if not df.empty:
+            st.subheader(f"Tracks in {choice}")
+            st.dataframe(df)
+        else:
+            st.info("No tracks found in this playlist.")
 
-# ─── 3) Otherwise, show the “Log in with Spotify” link ───
+    st.stop()  # don’t fall back to login link
+
+# ─── 3) Otherwise: show the “Log in with Spotify” link ───
 st.title("SonicMirror – Log in with Spotify")
 auth_url = sp_oauth.get_authorize_url()
-st.markdown(f"[🔐 Log in with Spotify]({auth_url})")
+st.markdown(f"[🔐 Click here to log in with Spotify]({auth_url})")
+
 
 
 
