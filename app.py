@@ -363,6 +363,13 @@ else:
 
                 bar.progress((idx + 1) / total)
 
+        # Debug info: count how many tracks got a polarity value
+found = sum(1 for e in sentiment_data if e['Polarity'] is not None)
+st.write(f"🎶 Debug: Polarity computed for {found}/{total} tracks.")
+if found == 0:
+    st.write("❗ No tracks returned sentiment polarity — lyrics may not have been retrieved.")
+
+
         sent_df = pd.DataFrame(sentiment_data).dropna(subset=['Polarity'])
         if not sent_df.empty:
             st.subheader("Average Lyrics Sentiment by Playlist")
