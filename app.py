@@ -20,6 +20,27 @@ sp_oauth = SpotifyOAuth(
     show_dialog=True
 )
 
+import io
+
+# … after you build your DataFrame, e.g. df_tracks …
+if choice:
+    # df_tracks is a DataFrame of whatever columns you want to export
+    st.subheader(f"Tracks in {choice}")
+    st.dataframe(df_tracks)
+
+    # export as CSV
+    csv_buffer = io.StringIO()
+    df_tracks.to_csv(csv_buffer, index=False)
+    csv_bytes = csv_buffer.getvalue().encode("utf-8")
+
+    st.download_button(
+        label="📥 Download this playlist as CSV",
+        data=csv_bytes,
+        file_name=f"{choice}.csv",
+        mime="text/csv",
+    )
+
+
 # 0) Try loading from Spotipy’s cache first
 if "token_info" not in st.session_state:
     cached = sp_oauth.get_cached_token()
