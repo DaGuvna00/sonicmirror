@@ -3,146 +3,152 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from wordcloud import WordCloud
-import spotipy
-from spotipy.oauth2 import SpotifyOAuth, SpotifyOauthError
-from spotipy.cache_handler import MemoryCacheHandler
 import io
 
-# ─── Page config ───
-st.set_page_config(page_title="SonicMirror – Playlist Analyzer", layout="wide")
+# ─── Page Config ───
+st.set_page_config(page_title="SonicMirror Exportify Analyzer", layout="wide")
+st.title("🎶 SonicMirror – Exportify Playlist Analyzer")
 
-# ─── OAuth settings ───
-CLIENT_ID     = st.secrets["SPOTIPY_CLIENT_ID"]
-CLIENT_SECRET = st.secrets["SPOTIPY_CLIENT_SECRET"]
-REDIRECT_URI  = "https://sonicmirror.streamlit.app"
-SCOPE         = "user-read-private playlist-read-private playlist-read-collaborative"
+# ─── File Upload ───
+st.sidebar.header("📂 Upload Exportify Exports")
+uploaded_files = st.sidebar.file_uploader(
+    "Select one or more Exportify CSV/Excel files", 
+    type=["csv","xls","xlsx"],
+    accept_multiple_files=True
+)
 
-# In-memory cache for OAuth
-def get_oauth():
-    return SpotifyOAuth(
-        client_id=CLIENT_ID,
-        client_secret=CLIENT_SECRET,
-        redirect_uri=REDIRECT_URI,
-        scope=SCOPE,
-        show_dialog=True,
-        cache_handler=MemoryCacheHandler()
-    )
-sp_oauth = get_oauth()
-
-# ─── Authentication helper ───
-def get_token():
-    token_info = st.session_state.get("token_info")
-    params = st.experimental_get_query_params()
-    code = params.get("code", [None])[0]
-    # Exchange code if present and not already authenticated
-    if code and not token_info:
+# ─── Parse and Combine ┋
+if uploaded_files:
+    playlists = []
+    for f in uploaded_files:
+        name = f.name.rsplit('.',1)[0]
         try:
-            token_info = sp_oauth.get_access_token(code, as_dict=True)
-            st.session_state["token_info"] = token_info
-        except SpotifyOauthError:
-            st.error("⚠️ Spotify auth failed. Please try again.")
-            st.session_state.pop("token_info", None)
-            token_info = None
-        # Clear URL and rerun once
-        st.experimental_set_query_params()
-        st.experimental_rerun()
-    # Refresh if expired
-    if token_info and sp_oauth.is_token_expired(token_info):
-        token_info = sp_oauth.refresh_access_token(token_info["refresh_token"])
-        st.session_state["token_info"] = token_info
-    return token_info
-
-# ─── Main flow ───
-token_info = get_token()
-
-# Title and login link if not authenticated (or prompt to upload)
-if not token_info:
-    st.title("SonicMirror – Log in or Upload Exportify Files")
+            if f.name.lower().endswith('.csv'):
+                df = pd.read_csv(f)
+            else:
+                df = pd.concat(pd.read_excel(f, sheet_name=None).values(), ignore_index=True)
+        except Exception as e:
+            st.sidebar.error(f"Error reading {f.name}: {e}")
+            continue
+        # Normalize Exportify columns
+        df = df.rename(columns={
+            'Artist Name(s)': 'Artist',
+            'Track Name': 'Track',
+            'Added At': 'AddedAt',
+            'Release Date': 'ReleaseDate'
+        })
+        df['Playlist'] = name
+        playlists.append(df)
+    if not playlists:
+        st.error("No valid files uploaded.")
+        st.stop()
+    data = pd.concat(playlists, ignore_index=True)
 else:
-    sp = spotipy.Spotify(auth=token_info["access_token"])
-    user = sp.current_user()
-    st.sidebar.markdown(f"**Logged in as:** {user.get('display_name','')} ({user.get('id','')})")
+    st.info("Upload at least one Exportify file to get started.")
+    st.stop()
 
-# ─── Dual Input: Spotify & Upload ───
-col1, col2 = st.columns(2)
-with col1:
-    if token_info:
-        st.header("🎧 Spotify Playlists")
-        playlists = sp.current_user_playlists(limit=50).get('items', [])
-        options = {p['name']: p['id'] for p in playlists}
-        selected = st.multiselect("Select playlist(s)", list(options.keys()))
-    else:
-        selected = []
-with col2:
-    st.header("📂 Upload Exportify Files")
-    uploaded = st.file_uploader(
-        "Upload Exportify playlist files (CSV, XLSX)",
-        type=["csv", "xls", "xlsx"],
-        accept_multiple_files=True
-    )
-    if uploaded:
-        parsed = []
-        for f in uploaded:
-            base = f.name.rsplit('.', 1)[0]
-            try:
-                if f.name.lower().endswith('.csv'):
-                    tmp = pd.read_csv(f)
-                else:
-                    sheets = pd.read_excel(f, sheet_name=None)
-                    tmp = pd.concat(sheets.values(), ignore_index=True)
-                # Normalize columns for consistency
-                if 'Artist Name(s)' in tmp.columns:
-                    tmp.rename(columns={'Artist Name(s)': 'Artist'}, inplace=True)
-                if 'Artist' not in tmp.columns and 'Artist Name' in tmp.columns:
-                    tmp.rename(columns={'Artist Name': 'Artist'}, inplace=True)
-                if 'Track Name' not in tmp.columns and 'Name' in tmp.columns:
-                    tmp.rename(columns={'Name': 'Track Name'}, inplace=True)
-                tmp['Playlist'] = base
-                parsed.append(tmp)
-                st.success(f"Loaded {f.name}: {len(tmp)} rows")
-            except Exception as e:
-                st.error(f"Error reading {f.name}: {e}")
-        if parsed:
-            st.session_state.setdefault('uploaded_dfs', []).extend(parsed)
+# ─── Sidebar Controls ───
+st.sidebar.header("🔎 Analysis Options")
+playlist_names = data['Playlist'].unique().tolist()
+selected = st.sidebar.multiselect("Choose playlists to include", playlist_names, default=playlist_names)
 
-# ─── Assemble DataFrames ───
-all_dfs = []
-# From Spotify
-if token_info and selected:
-    for name in selected:
-        pid = options[name]
-        tracks, ids = [], []
-        results = sp.playlist_items(pid)
-        while results:
-            for item in results['items']:
-                t = item.get('track')
-                if t:
-                    tracks.append(t)
-                    ids.append(t.get('id'))
-            results = sp.next(results) if results.get('next') else None
-        # Batch fetch audio features
-        features = {}
-        for i in range(0, len(ids), 100):
-            for f in sp.audio_features(ids[i:i+100]) or []:
-                if f and f.get('id'):
-                    features[f['id']] = f
-        rows = []
-        for t in tracks:
-            af = features.get(t.get('id'), {})
-            row = {
-                'Playlist': name,
-                'Track Name': t.get('name'),
-                'Artist': ', '.join(a['name'] for a in t.get('artists', []))
-            }
-            for feat in ['energy','valence','danceability','acousticness',
-                         'instrumentalness','liveness','tempo','speechiness',
-                         'loudness','key']:
-                row[feat.capitalize()] = af.get(feat)
-            rows.append(row)
-        all_dfs.append(pd.DataFrame(rows))
-# From uploads
-if st.session_state.get('uploaded_dfs'):
-    all_dfs.extend(st.session_state['uploaded_dfs'])
+features = ['Energy','Valence','Danceability','Acousticness','Instrumentalness','Liveness','Speechiness','Tempo','Loudness']
+selected_feats = st.sidebar.multiselect("Select audio features", features, default=features)
+
+# Date parsing
+data['AddedAt'] = pd.to_datetime(data['AddedAt'], errors='coerce')
+data['ReleaseDate'] = pd.to_datetime(data['ReleaseDate'], errors='coerce')
+# Discovery lag: days between release and add
+data['LagDays'] = (data['AddedAt'] - data['ReleaseDate']).dt.days
+
+# Filter data
+df = data[data['Playlist'].isin(selected)].copy()
+
+# ─── Main Dashboard ───
+st.header("📋 Overview")
+st.write(f"**Total tracks:** {len(df)} across {len(selected)} playlist(s)")
+
+# Show raw table (first 10 rows)
+st.subheader("Track Sample")
+st.dataframe(df[['Playlist','Track','Artist','AddedAt','ReleaseDate'] + selected_feats].head(10))
+
+# ─── Comparative Metrics ───
+st.header("📊 Comparative Audio Feature Averages")
+avgs = df.groupby('Playlist')[selected_feats].mean().round(3)
+st.dataframe(avgs)
+
+# Bar chart of a chosen feature
+feat = st.selectbox("Feature to visualize by playlist", selected_feats)
+fig, ax = plt.subplots()
+avgs[feat].plot(kind='bar', ax=ax)
+ax.set_ylabel(feat)
+ax.set_title(f"Average {feat} by Playlist")
+st.pyplot(fig)
+
+# ─── Discovery Lag Distribution ───
+st.header("⏱ Discovery Lag (Release → Add)")
+fig2, ax2 = plt.subplots()
+for pname in selected:
+    subset = df[df['Playlist']==pname]
+    ax2.hist(subset['LagDays'].dropna(), bins=30, alpha=0.5, label=pname)
+ax2.set_xlabel('Days')
+ax2.set_ylabel('Track Count')
+ax2.legend()
+ax2.set_title('Discovery Lag by Playlist')
+st.pyplot(fig2)
+
+# ─── Overlap & Uniques ───
+st.header("🔗 Playlist Overlap & Unique Tracks")
+sets = {p: set(df[df['Playlist']==p]['Track']) for p in selected}
+# pairwise overlaps
+if len(selected)>=2:
+    import itertools
+    ov_data = []
+    for a,b in itertools.combinations(selected,2):
+        count = len(sets[a].intersection(sets[b]))
+        ov_data.append({'Pair':f"{a} & {b}", 'Overlap':count})
+    ov_df = pd.DataFrame(ov_data)
+    st.subheader("Pairwise Overlap Counts")
+    st.bar_chart(ov_df.set_index('Pair'))
+# unique counts
+uniq = {p: len(sets[p] - set().union(*(sets[q] for q in selected if q!=p))) for p in selected}
+uniq_df = pd.DataFrame.from_dict(uniq, orient='index', columns=['Unique Tracks'])
+st.subheader("Unique Tracks per Playlist")
+st.bar_chart(uniq_df)
+
+# ─── Correlation Heatmap ───
+st.header("🧩 Feature Correlation")
+if selected_feats:
+    corr = df[selected_feats].corr()
+    fig3, ax3 = plt.subplots()
+    cax = ax3.matshow(corr, vmin=-1, vmax=1)
+    fig3.colorbar(cax)
+    ax3.set_xticks(range(len(selected_feats)))
+    ax3.set_yticks(range(len(selected_feats)))
+    ax3.set_xticklabels(selected_feats, rotation=90)
+    ax3.set_yticklabels(selected_feats)
+    st.pyplot(fig3)
+
+# ─── Word Clouds ───
+st.header("☁️ Artist Word Cloud")
+artist_text = ' '.join(df['Artist'].dropna().tolist())
+if artist_text:
+    wc = WordCloud(width=800, height=400, background_color='white').generate(artist_text)
+    st.image(wc.to_array(), use_column_width=True)
+
+# ─── Download Combined CSV ───
+st.header("💾 Export Data")
+buf = io.StringIO()
+df.to_csv(buf, index=False)
+st.download_button("Download filtered data as CSV", buf.getvalue().encode('utf-8'), "filtered_playlists.csv")
+
+# ─── Insights & Next Steps ───
+st.header("📝 Insights & Ideas")
+st.markdown("- Identify your most and least 'discovered' tracks by lag days.")
+st.markdown("- Compare 'energy vs valence' scatter for each playlist.")
+st.markdown("- Drill into seasonal trends by month or year added.")
+st.markdown("- Add genre parsing to enrich word clouds.")
+
 
 # ─── Render Report ───
 if all_dfs:
