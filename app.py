@@ -151,7 +151,7 @@ st.markdown("- Add time-series of added track counts over time.")
 
 
     # 🎛 Averages
-    st.subheader("🎛 Key Audio Feature Averages")
+st.subheader("🎛 Key Audio Feature Averages")
     metrics = ["Energy", "Valence", "Danceability", "Acousticness", "Instrumentalness", "Liveness", "Tempo"]
     st.dataframe(df[[m for m in metrics if m in df.columns]].mean().round(3).rename("Average").to_frame())
 
