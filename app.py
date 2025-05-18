@@ -17,7 +17,7 @@ uploaded_files = st.sidebar.file_uploader(
     accept_multiple_files=True
 )
 
-# ─── Parse and Combine ┋
+# ─── Parse and Combine CSVs/Excels ───
 if uploaded_files:
     playlists = []
     for f in uploaded_files:
@@ -26,7 +26,8 @@ if uploaded_files:
             if f.name.lower().endswith('.csv'):
                 df = pd.read_csv(f)
             else:
-                df = pd.concat(pd.read_excel(f, sheet_name=None).values(), ignore_index=True)
+                sheets = pd.read_excel(f, sheet_name=None)
+                df = pd.concat(sheets.values(), ignore_index=True)
         except Exception as e:
             st.sidebar.error(f"Error reading {f.name}: {e}")
             continue
@@ -40,11 +41,11 @@ if uploaded_files:
         df['Playlist'] = name
         playlists.append(df)
     if not playlists:
-        st.error("No valid files uploaded.")
+        st.error("No valid files uploaded. Please check your Exportify export format.")
         st.stop()
     data = pd.concat(playlists, ignore_index=True)
 else:
-    st.info("Upload at least one Exportify file to get started.")
+    st.info("📥 Upload at least one Exportify file to begin analysis.")
     st.stop()
 
 # ─── Sidebar Controls ───
@@ -55,30 +56,31 @@ selected = st.sidebar.multiselect("Choose playlists to include", playlist_names,
 features = ['Energy','Valence','Danceability','Acousticness','Instrumentalness','Liveness','Speechiness','Tempo','Loudness']
 selected_feats = st.sidebar.multiselect("Select audio features", features, default=features)
 
-# Date parsing
-data['AddedAt'] = pd.to_datetime(data['AddedAt'], errors='coerce')
-data['ReleaseDate'] = pd.to_datetime(data['ReleaseDate'], errors='coerce')
-# Discovery lag: days between release and add
+# ─── Date Parsing & Lag Calculation ───
+# Convert to UTC then drop timezone so both columns align
+data['AddedAt'] = pd.to_datetime(data['AddedAt'], errors='coerce', utc=True).dt.tz_convert(None)
+data['ReleaseDate'] = pd.to_datetime(data['ReleaseDate'], errors='coerce', utc=True).dt.tz_convert(None)
+# Compute discovery lag in days
 data['LagDays'] = (data['AddedAt'] - data['ReleaseDate']).dt.days
 
-# Filter data
+# ─── Filter & Prepare Dashboard Data ───
 df = data[data['Playlist'].isin(selected)].copy()
 
 # ─── Main Dashboard ───
-st.header("📋 Overview")
-st.write(f"**Total tracks:** {len(df)} across {len(selected)} playlist(s)")
+st.header("📋 Combined Playlist Overview")
+st.write(f"**Total Tracks:** {len(df)} across {len(selected)} playlist(s)")
 
-# Show raw table (first 10 rows)
-st.subheader("Track Sample")
-st.dataframe(df[['Playlist','Track','Artist','AddedAt','ReleaseDate'] + selected_feats].head(10))
+# Sample of raw data
+st.subheader("🔍 Data Sample")
+st.dataframe(df[['Playlist','Track','Artist','AddedAt','ReleaseDate','LagDays'] + selected_feats].head(10))
 
-# ─── Comparative Metrics ───
-st.header("📊 Comparative Audio Feature Averages")
+# ─── Comparative Feature Averages ───
+st.header("📊 Average Audio Features by Playlist")
 avgs = df.groupby('Playlist')[selected_feats].mean().round(3)
 st.dataframe(avgs)
 
-# Bar chart of a chosen feature
-feat = st.selectbox("Feature to visualize by playlist", selected_feats)
+# Visual: selected feature
+feat = st.selectbox("Visualize feature", selected_feats)
 fig, ax = plt.subplots()
 avgs[feat].plot(kind='bar', ax=ax)
 ax.set_ylabel(feat)
@@ -86,86 +88,65 @@ ax.set_title(f"Average {feat} by Playlist")
 st.pyplot(fig)
 
 # ─── Discovery Lag Distribution ───
-st.header("⏱ Discovery Lag (Release → Add)")
+st.header("⏱ Discovery Lag Distribution")
 fig2, ax2 = plt.subplots()
-for pname in selected:
-    subset = df[df['Playlist']==pname]
-    ax2.hist(subset['LagDays'].dropna(), bins=30, alpha=0.5, label=pname)
-ax2.set_xlabel('Days')
+for p in selected:
+    subset = df[df['Playlist']==p]
+    ax2.hist(subset['LagDays'].dropna(), bins=30, alpha=0.5, label=p)
+ax2.set_xlabel('Lag (Days)')
 ax2.set_ylabel('Track Count')
 ax2.legend()
-ax2.set_title('Discovery Lag by Playlist')
 st.pyplot(fig2)
 
-# ─── Overlap & Uniques ───
-st.header("🔗 Playlist Overlap & Unique Tracks")
+# ─── Overlap & Unique Tracks ───
+st.header("🔗 Playlist Overlap & Unique")
 sets = {p: set(df[df['Playlist']==p]['Track']) for p in selected}
-# pairwise overlaps
-if len(selected)>=2:
-    import itertools
-    ov_data = []
-    for a,b in itertools.combinations(selected,2):
-        count = len(sets[a].intersection(sets[b]))
-        ov_data.append({'Pair':f"{a} & {b}", 'Overlap':count})
-    ov_df = pd.DataFrame(ov_data)
-    st.subheader("Pairwise Overlap Counts")
-    st.bar_chart(ov_df.set_index('Pair'))
-# unique counts
+import itertools
+# Pairwise overlap counts
+ov_data = []
+for a, b in itertools.combinations(selected, 2):
+    ov = len(sets[a] & sets[b])
+    ov_data.append({'Pair': f"{a} & {b}", 'Overlap': ov})
+ov_df = pd.DataFrame(ov_data)
+st.subheader("Pairwise Overlap")
+st.bar_chart(ov_df.set_index('Pair'))
+# Unique per playlist
 uniq = {p: len(sets[p] - set().union(*(sets[q] for q in selected if q!=p))) for p in selected}
-uniq_df = pd.DataFrame.from_dict(uniq, orient='index', columns=['Unique Tracks'])
+uniq_df = pd.DataFrame.from_dict(uniq, orient='index', columns=['UniqueTracks'])
 st.subheader("Unique Tracks per Playlist")
 st.bar_chart(uniq_df)
 
-# ─── Correlation Heatmap ───
+# ─── Correlation Matrix ───
 st.header("🧩 Feature Correlation")
-if selected_feats:
-    corr = df[selected_feats].corr()
-    fig3, ax3 = plt.subplots()
-    cax = ax3.matshow(corr, vmin=-1, vmax=1)
-    fig3.colorbar(cax)
-    ax3.set_xticks(range(len(selected_feats)))
-    ax3.set_yticks(range(len(selected_feats)))
-    ax3.set_xticklabels(selected_feats, rotation=90)
-    ax3.set_yticklabels(selected_feats)
-    st.pyplot(fig3)
+corr = df[selected_feats].corr()
+fig3, ax3 = plt.subplots()
+cax = ax3.matshow(corr, vmin=-1, vmax=1)
+fig3.colorbar(cax)
+ax3.set_xticks(range(len(selected_feats)))
+ax3.set_yticks(range(len(selected_feats)))
+ax3.set_xticklabels(selected_feats, rotation=90)
+ax3.set_yticklabels(selected_feats)
+st.pyplot(fig3)
 
-# ─── Word Clouds ───
+# ─── Word Cloud ───
 st.header("☁️ Artist Word Cloud")
 artist_text = ' '.join(df['Artist'].dropna().tolist())
 if artist_text:
     wc = WordCloud(width=800, height=400, background_color='white').generate(artist_text)
     st.image(wc.to_array(), use_column_width=True)
 
-# ─── Download Combined CSV ───
-st.header("💾 Export Data")
+# ─── Export Filtered Data ───
+st.header("💾 Download Data")
 buf = io.StringIO()
 df.to_csv(buf, index=False)
-st.download_button("Download filtered data as CSV", buf.getvalue().encode('utf-8'), "filtered_playlists.csv")
+st.download_button("Download CSV", buf.getvalue().encode('utf-8'), 'sonicmirror_export.csv')
 
-# ─── Insights & Next Steps ───
+# ─── Suggested Next Steps ───
 st.header("📝 Insights & Ideas")
-st.markdown("- Identify your most and least 'discovered' tracks by lag days.")
-st.markdown("- Compare 'energy vs valence' scatter for each playlist.")
-st.markdown("- Drill into seasonal trends by month or year added.")
-st.markdown("- Add genre parsing to enrich word clouds.")
-
-
-# ─── Render Report ───
-if all_dfs:
-    df = pd.concat(all_dfs, ignore_index=True)
-    # Drop rows missing core columns
-    df = df.dropna(subset=['Track Name', 'Artist'])
-    st.subheader("📋 Combined Playlist Overview")
-    st.write(f"**Total tracks:** {len(df)}")
-    st.dataframe(df.head())
-
-    # Download merged data
-    buffer = io.StringIO()
-    df.to_csv(buffer, index=False)
-    st.download_button("📥 Download combined CSV", buffer.getvalue().encode('utf-8'), 'combined.csv')
-
-    # ─── Charting code goes here ───
-    # (Mood maps, radar, histograms, word clouds, etc.)
+st.markdown("- Analyze lag trends by month/year to see seasonal discovery patterns.")
+st.markdown("- Compare valence vs energy scatter plots for mood mapping.")
+st.markdown("- Integrate genre tags and include genre distribution charts.")
+st.markdown("- Add time-series of added track counts over time.")
 
 
 
