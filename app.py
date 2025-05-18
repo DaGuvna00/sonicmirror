@@ -77,16 +77,24 @@ with col2:
         type=["csv", "xls", "xlsx"],
         accept_multiple_files=True
     )
+    # robust parsing with error handling
     if uploaded:
+        parsed = []
         for f in uploaded:
             base = f.name.rsplit(".", 1)[0]
-            if f.name.lower().endswith(".csv"):
-                tmp = pd.read_csv(f)
-            else:
-                xls = pd.ExcelFile(f)
-                tmp = pd.concat([xls.parse(s) for s in xls.sheet_names], ignore_index=True)
-            tmp["Playlist"] = base
-            st.session_state.setdefault("uploaded_dfs", []).append(tmp)
+            try:
+                if f.name.lower().endswith(".csv"):
+                    tmp = pd.read_csv(f)
+                else:
+                    sheets = pd.read_excel(f, sheet_name=None)
+                    tmp = pd.concat(sheets.values(), ignore_index=True)
+                tmp["Playlist"] = base
+                parsed.append(tmp)
+                st.success(f"Loaded {f.name}: {len(tmp)} rows")
+            except Exception as e:
+                st.error(f"Error reading {f.name}: {e}")
+        if parsed:
+            st.session_state.setdefault("uploaded_dfs", []).extend(parsed)
 
 # ─── Combine DataFrames ───
 all_dfs = []
@@ -141,32 +149,6 @@ if all_dfs:
     # ─── Charting code goes here ───
     # (Mood maps, radar, histograms, word clouds, etc.)
 
-# 7) Handle Exportify file uploads
-uploaded = st.file_uploader(
-    "Upload Exportify playlist files (CSV/XLSX)", 
-    type=["csv","xls","xlsx"], 
-    accept_multiple_files=True
-)
-if uploaded:
-    for f in uploaded:
-        base = f.name.rsplit(".",1)[0]
-        if f.name.endswith(".csv"):
-            tmp = pd.read_csv(f)
-        else:
-            xls = pd.ExcelFile(f)
-            tmp = pd.concat([xls.parse(s) for s in xls.sheet_names], ignore_index=True)
-        tmp["Playlist"] = base
-        st.session_state.setdefault("all_dfs", []).append(tmp)
-
-# 8) Build the report when we have data
-if st.session_state.get("all_dfs"):
-    df = pd.concat(st.session_state["all_dfs"], ignore_index=True)
-    df = df.dropna(subset=["Track Name","Artist Name(s)"])
-    st.subheader("📋 Playlist Overview")
-    st.write(f"**Tracks loaded:** {len(df)}")
-    st.dataframe(df[["Track Name","Artist Name(s)","Playlist"]].head())
-
-    # … your existing charts & tables here …
 
 
     # 🎛 Averages
