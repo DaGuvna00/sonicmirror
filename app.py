@@ -5,6 +5,8 @@ import matplotlib.pyplot as plt
 from wordcloud import WordCloud
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth, SpotifyOauthError
+from spotipy.cache_handler import MemoryCacheHandler
+import io
 
 # ─── Page config ───
 st.set_page_config(page_title="SonicMirror – Playlist Analyzer", layout="wide")
@@ -13,8 +15,131 @@ st.set_page_config(page_title="SonicMirror – Playlist Analyzer", layout="wide"
 CLIENT_ID     = st.secrets["SPOTIPY_CLIENT_ID"]
 CLIENT_SECRET = st.secrets["SPOTIPY_CLIENT_SECRET"]
 REDIRECT_URI  = "https://sonicmirror.streamlit.app"
+SCOPE         = "user-read-private playlist-read-private playlist-read-collaborative"
 
+# In-memory cache for OAuth
+cache_handler = MemoryCacheHandler()
+sp_oauth = SpotifyOAuth(
+    client_id=CLIENT_ID,
+    client_secret=CLIENT_SECRET,
+    redirect_uri=REDIRECT_URI,
+    scope=SCOPE,
+    show_dialog=True,
+    cache_handler=cache_handler
+)
 
+# ─── Authentication helper ───
+def get_token():
+    token_info = st.session_state.get("token_info")
+    params = st.experimental_get_query_params()
+    code = params.get("code", [None])[0]
+    if code and not token_info:
+        try:
+            raw = sp_oauth.get_access_token(code, as_dict=True)
+            token_info = raw
+            st.session_state["token_info"] = token_info
+        except SpotifyOauthError:
+            st.error("⚠️ Spotify auth failed. Please try again.")
+            st.session_state.pop("token_info", None)
+            token_info = None
+        st.experimental_set_query_params()
+        st.experimental_rerun()
+    if token_info and sp_oauth.is_token_expired(token_info):
+        refreshed = sp_oauth.refresh_access_token(token_info["refresh_token"])
+        st.session_state["token_info"] = refreshed
+        token_info = refreshed
+    return token_info
+
+# ─── Main flow ───
+token_info = get_token()
+
+if not token_info:
+    st.title("SonicMirror – Log in or Upload Exportify Files")
+else:
+    sp = spotipy.Spotify(auth=token_info["access_token"])
+    user = sp.current_user()
+    st.sidebar.markdown(f"**Logged in as:** {user.get('display_name','')} ({user.get('id','')})")
+
+# ─── Dual Input: Spotify or Exportify Upload ───
+col1, col2 = st.columns(2)
+with col1:
+    if token_info:
+        st.header("🎧 Spotify Playlists")
+        playlists = sp.current_user_playlists(limit=50).get('items', [])
+        options = {p['name']: p['id'] for p in playlists}
+        selected = st.multiselect("Select playlist(s)", list(options.keys()))
+    else:
+        selected = []
+with col2:
+    st.header("📂 Upload Exportify Files")
+    uploaded = st.file_uploader(
+        "Upload Exportify playlist files (CSV, XLSX)",
+        type=["csv", "xls", "xlsx"],
+        accept_multiple_files=True
+    )
+    if uploaded:
+        for f in uploaded:
+            base = f.name.rsplit(".", 1)[0]
+            if f.name.lower().endswith(".csv"):
+                tmp = pd.read_csv(f)
+            else:
+                xls = pd.ExcelFile(f)
+                tmp = pd.concat([xls.parse(s) for s in xls.sheet_names], ignore_index=True)
+            tmp["Playlist"] = base
+            st.session_state.setdefault("uploaded_dfs", []).append(tmp)
+
+# ─── Combine DataFrames ───
+all_dfs = []
+# From Spotify
+if token_info and selected:
+    for name in selected:
+        pid = options[name]
+        tracks, ids = [], []
+        results = sp.playlist_items(pid)
+        while results:
+            for item in results['items']:
+                t = item.get('track')
+                if t:
+                    tracks.append(t)
+                    ids.append(t.get('id'))
+            results = sp.next(results) if results.get('next') else None
+        # fetch features
+        features = {}
+        for i in range(0, len(ids), 100):
+            batch = ids[i:i+100]
+            for finfo in sp.audio_features(batch) or []:
+                if finfo and finfo.get('id'):
+                    features[finfo['id']] = finfo
+        rows = []
+        for t in tracks:
+            af = features.get(t.get('id'), {})
+            row = { 'Playlist': name, 'Track Name': t.get('name'),
+                    'Artist': ', '.join(a['name'] for a in t.get('artists', [])) }
+            # add audio features
+            for feat in ['energy','valence','danceability','acousticness',
+                         'instrumentalness','liveness','tempo','speechiness',
+                         'loudness','key']:
+                row[feat.capitalize()] = af.get(feat)
+            rows.append(row)
+        all_dfs.append(pd.DataFrame(rows))
+# From uploads
+if st.session_state.get("uploaded_dfs"):
+    all_dfs.extend(st.session_state["uploaded_dfs"])
+
+# ─── Render Report ───
+if all_dfs:
+    df = pd.concat(all_dfs, ignore_index=True).dropna(subset=["Track Name","Artist"])
+    st.subheader("📋 Combined Playlist Overview")
+    st.write(f"**Total tracks:** {len(df)}")
+    st.dataframe(df.head())
+
+    # Export CSV
+    buffer = io.StringIO()
+    df.to_csv(buffer, index=False)
+    st.download_button("📥 Download combined CSV", buffer.getvalue().encode('utf-8'), "combined.csv")
+
+    # ─── Charting code goes here ───
+    # (Mood maps, radar, histograms, word clouds, etc.)
 
 # 7) Handle Exportify file uploads
 uploaded = st.file_uploader(
