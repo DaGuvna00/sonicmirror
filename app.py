@@ -241,28 +241,29 @@ ax_genre.set_xlabel('Count')
 ax_genre.set_title('Top Genres in Your Playlists')
 st.pyplot(fig_genre)
 
-# ─── Playlist Clustering & Similarity ───
-from sklearn.cluster import KMeans
-from sklearn.decomposition import PCA
-st.header("🗂️ Playlist Clustering & Similarity")
-# Aggregate features per playlist (reuse avgs computed earlier)
-X = avgs[selected_feats]
-# choose number of clusters
-defaul_n = min(3, len(X))
-n_clusters = st.slider("Number of clusters", 2, max(2, len(X)), value=defaul_n)
-# run k-means
-kmeans = KMeans(n_clusters=n_clusters, random_state=42).fit(X.values)
-labels = kmeans.labels_
-cluster_df = pd.DataFrame({'Playlist': X.index, 'Cluster': labels})
-st.subheader("Cluster Assignments")
-st.dataframe(cluster_df)
-
-# PCA projection for visualization
-pca = PCA(n_components=2)
-coords = pca.fit_transform(X.values)
-fig_cluster, ax_cluster = plt.subplots()
-for idx, playlist in enumerate(X.index):
-    ax_cluster.scatter(coords[idx,0], coords[idx,1], c=[labels[idx]], cmap='tab10', label=playlist)
-    ax_cluster.annotate(playlist, (coords[idx,0], coords[idx,1]))
-ax_cluster.set_title('Playlist Clusters (PCA Projection)')
-st.pyplot(fig_cluster)
+# ─── Playlist Similarity Matrix ───
+st.header("🗂️ Playlist Similarity")
+# Compute cosine similarity between playlists based on selected_feats
+from numpy.linalg import norm
+# Build feature matrix
+X = avgs[selected_feats].values
+labels = avgs.index.tolist()
+# Normalize rows
+norms = norm(X, axis=1, keepdims=True)
+X_norm = X / norms
+# Cosine similarity matrix
+sim_matrix = np.dot(X_norm, X_norm.T)
+sim_df = pd.DataFrame(sim_matrix, index=labels, columns=labels)
+# Display similarity table
+st.subheader("Cosine Similarity Table")
+st.dataframe(sim_df.round(3))
+# Heatmap
+fig_sim, ax_sim = plt.subplots()
+cax = ax_sim.matshow(sim_df, vmin=0, vmax=1)
+fig_sim.colorbar(cax)
+ax_sim.set_xticks(range(len(labels)))
+ax_sim.set_yticks(range(len(labels)))
+ax_sim.set_xticklabels(labels, rotation=90)
+ax_sim.set_yticklabels(labels)
+ax_sim.set_title('Playlist Cosine Similarity')
+st.pyplot(fig_sim)
