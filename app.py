@@ -393,3 +393,26 @@ for slot, params in slots.items():
                 random_state=42
             )
         )
+
+# ─── Cross-Playlist Radar Comparison ───
+st.header("🕸️ Cross-Playlist Radar Comparison")
+# Select up to 4 playlists for radar
+radar_choices = st.multiselect(
+    "Pick up to 4 playlists to compare", df['Playlist'].unique().tolist(), default=selected[:2]
+)
+if radar_choices:
+    metrics = selected_feats
+    avg_vals = df[df['Playlist'].isin(radar_choices)].groupby('Playlist')[metrics].mean()
+    angles = np.linspace(0, 2 * np.pi, len(metrics), endpoint=False).tolist()
+    angles += angles[:1]
+    fig_radar, ax_radar = plt.subplots(subplot_kw={"polar": True}, figsize=(6,6))
+    for pname in radar_choices[:4]:
+        vals = avg_vals.loc[pname].tolist()
+        vals += vals[:1]
+        ax_radar.plot(angles, vals, label=pname)
+        ax_radar.fill(angles, vals, alpha=0.1)
+    ax_radar.set_xticks(angles[:-1])
+    ax_radar.set_xticklabels(metrics)
+    ax_radar.set_title("Audio Feature Radar Comparison")
+    ax_radar.legend(loc='upper right', bbox_to_anchor=(1.3, 1.1))
+    st.pyplot(fig_radar)
