@@ -381,4 +381,28 @@ if found == 0:
             st.pyplot(fig)
         else:
             st.error("⚠️ No sentiment polarity computed. Check your token and network.")
-# ─── End of Dynamic Sentiment Analysis ───
+
+# ─── Listening Session Simulator ───
+st.header("🎧 Listening Session Simulator")
+# Define time-of-day slots with energy and valence ranges
+slots = {
+    "Morning (6–9 AM)": {"energy": (0.0, 0.5), "valence": (0.5, 1.0)},
+    "Afternoon (9 AM–5 PM)": {"energy": (0.3, 0.7), "valence": (0.4, 0.8)},
+    "Evening (5–9 PM)": {"energy": (0.5, 1.0), "valence": (0.3, 0.7)},
+    "Night (9 PM–6 AM)": {"energy": (0.0, 0.4), "valence": (0.2, 0.6)}
+}
+# User-configurable number of tracks per slot
+num_tracks = st.slider("How many tracks per slot", min_value=3, max_value=10, value=5)
+# Sample tracks for each slot
+for slot, params in slots.items():
+    candidates = df[
+        df['Energy'].between(*params['energy']) &
+        df['Valence'].between(*params['valence'])
+    ]
+    st.subheader(f"{slot} — {len(candidates)} candidates")
+    if not candidates.empty:
+        sample = candidates[['Track','Artist','Energy','Valence']]
+        st.table(
+            sample.sample(
+                n=min(num_tracks, len(sample)),
+                random_state=42
