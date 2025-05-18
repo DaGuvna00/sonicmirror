@@ -240,3 +240,29 @@ ax_genre.barh(top_genres['Genre'][::-1], top_genres['Count'][::-1])
 ax_genre.set_xlabel('Count')
 ax_genre.set_title('Top Genres in Your Playlists')
 st.pyplot(fig_genre)
+
+# ─── Playlist Clustering & Similarity ───
+from sklearn.cluster import KMeans
+from sklearn.decomposition import PCA
+st.header("🗂️ Playlist Clustering & Similarity")
+# Aggregate features per playlist (reuse avgs computed earlier)
+X = avgs[selected_feats]
+# choose number of clusters
+defaul_n = min(3, len(X))
+n_clusters = st.slider("Number of clusters", 2, max(2, len(X)), value=defaul_n)
+# run k-means
+kmeans = KMeans(n_clusters=n_clusters, random_state=42).fit(X.values)
+labels = kmeans.labels_
+cluster_df = pd.DataFrame({'Playlist': X.index, 'Cluster': labels})
+st.subheader("Cluster Assignments")
+st.dataframe(cluster_df)
+
+# PCA projection for visualization
+pca = PCA(n_components=2)
+coords = pca.fit_transform(X.values)
+fig_cluster, ax_cluster = plt.subplots()
+for idx, playlist in enumerate(X.index):
+    ax_cluster.scatter(coords[idx,0], coords[idx,1], c=[labels[idx]], cmap='tab10', label=playlist)
+    ax_cluster.annotate(playlist, (coords[idx,0], coords[idx,1]))
+ax_cluster.set_title('Playlist Clusters (PCA Projection)')
+st.pyplot(fig_cluster)
