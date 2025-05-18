@@ -416,3 +416,36 @@ if radar_choices:
     ax_radar.set_title("Audio Feature Radar Comparison")
     ax_radar.legend(loc='upper right', bbox_to_anchor=(1.3, 1.1))
     st.pyplot(fig_radar)
+
+# ─── AI-Powered Summaries & Recommendations ───
+st.header("🤖 AI-Powered Playlist Synopsis & Recommendations")
+openai_key = st.secrets.get("OPENAI_API_KEY")
+if not openai_key:
+    st.warning("🔑 Add your OPENAI_API_KEY to Streamlit secrets to enable AI-powered summaries and recommendations.")
+else:
+    summary_choices = st.multiselect(
+        "Select playlists for AI synopsis", df['Playlist'].unique().tolist(), default=selected[:2]
+    )
+    if st.button("📝 Generate AI Synopsis"):
+        import openai
+        openai.api_key = openai_key
+        # Build prompt using average features of selected playlists
+        feature_data = avgs.loc[summary_choices].to_dict()
+        prompt = (
+            f"You are a music recommendation assistant. "
+            f"Write a concise summary of the mood and audio profile for these Spotify playlists: {', '.join(summary_choices)}. "
+            f"The average audio features are: {feature_data}. "
+            f"Then recommend 5 new songs (title and artist) that would fit well with these playlists."        )
+        with st.spinner("Generating AI summary and recommendations…"):
+            response = openai.ChatCompletion.create(
+                model="gpt-4",
+                messages=[
+                    {"role": "system", "content": "You are a helpful assistant specialized in music playlist analysis."},
+                    {"role": "user", "content": prompt}
+                ],
+                max_tokens=500,
+                temperature=0.7
+            )
+            ai_output = response.choices[0].message.content
+        st.subheader("📝 AI Synopsis & Recommendations")
+        st.write(ai_output)
