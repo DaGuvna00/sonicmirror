@@ -416,7 +416,7 @@ if st.button("💭 Run Lyrics Sentiment Analysis"):
             for idx, entry in enumerate(tracks_unique):
                 title = re.sub(r"\s*-\s*.*remix$", "", str(entry.get('Track') or ""), flags=re.IGNORECASE)
                 title = re.sub(r"\(.*?\)", "", title).strip()
-                artist = entry['Artist'].split(',')[0]
+                artist = str(entry.get('Artist') or "").split(',')[0]
                 try:
                     song = genius.search_song(title, artist)
                     lyrics = song.lyrics if song and hasattr(song, 'lyrics') else ""
