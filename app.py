@@ -93,9 +93,11 @@ if "token_info" in st.session_state:
     # stop so we don’t ever hit the login link below
     st.stop()
 
-# ─── 3) Otherwise: show just the login link ───
+# … in your “otherwise, show the login link” section …
 st.title("SonicMirror – Log in with Spotify")
-auth_url = sp_oauth.get_authoriz_
+auth_url = sp_oauth.get_authorize_url()   # <— note the full name here
+st.markdown(f"[🔐 Click here to log in with Spotify]({auth_url})")
+
 
 
 
