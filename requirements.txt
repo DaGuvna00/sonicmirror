@@ -7,3 +7,5 @@ wordcloud
 openai==1.25.1
 transformers==4.40.1
 requests
+lyricsgenius>=2.0.1
+textblob>=0.17.1
