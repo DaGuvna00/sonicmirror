@@ -40,8 +40,7 @@ st.write("🔍 session_state keys:", list(st.session_state.keys()))
 # 4) Exchange code for token (only once)
 if code and "token_info" not in st.session_state:
     try:
-        # no more as_dict=True
-        raw = sp_oauth.get_access_token(code)
+        raw = sp_oauth.get_access_token(code)  # no more as_dict=True
         if isinstance(raw, dict):
             token_info = raw
             access_token = token_info.get("access_token")
@@ -52,17 +51,16 @@ if code and "token_info" not in st.session_state:
         if not access_token:
             raise RuntimeError("No access token returned by Spotify")
 
-        # store and clear URL so we don't retry with same code
         st.session_state.token_info = token_info
+        # Clear the URL so we don’t keep retrying the same code
         st.query_params = {}
-        st.experimental_rerun()
+        st.rerun()  # ← use st.rerun() instead of experimental_rerun :contentReference[oaicite:0]{index=0}
 
     except SpotifyOauthError as e:
-        # catch the “invalid_grant” and clear it for the user
         if "invalid_grant" in str(e):
             st.warning("❗️ Authorization code expired or invalid. Redirecting to login…")
             st.query_params = {}
-            st.experimental_rerun()
+            st.rerun()  # ← same replacement here :contentReference[oaicite:1]{index=1}
         else:
             st.error("Spotify token exchange failed.")
             st.exception(e)
@@ -150,7 +148,6 @@ if st.session_state.get("all_dfs"):
     st.dataframe(df[["Track Name","Artist Name(s)","Playlist"]].head())
 
     # … your existing charts & tables here …
-
 
 
     # 🎛 Averages
