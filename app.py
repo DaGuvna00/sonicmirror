@@ -18,41 +18,44 @@ REDIRECT_URI  = "https://sonicmirror.streamlit.app"
 SCOPE         = "user-read-private playlist-read-private playlist-read-collaborative"
 
 # In-memory cache for OAuth
-cache_handler = MemoryCacheHandler()
-sp_oauth = SpotifyOAuth(
-    client_id=CLIENT_ID,
-    client_secret=CLIENT_SECRET,
-    redirect_uri=REDIRECT_URI,
-    scope=SCOPE,
-    show_dialog=True,
-    cache_handler=cache_handler
-)
+def get_oauth():
+    return SpotifyOAuth(
+        client_id=CLIENT_ID,
+        client_secret=CLIENT_SECRET,
+        redirect_uri=REDIRECT_URI,
+        scope=SCOPE,
+        show_dialog=True,
+        cache_handler=MemoryCacheHandler()
+    )
+sp_oauth = get_oauth()
 
 # ─── Authentication helper ───
 def get_token():
     token_info = st.session_state.get("token_info")
     params = st.experimental_get_query_params()
     code = params.get("code", [None])[0]
+    # Exchange code if present and not already authenticated
     if code and not token_info:
         try:
-            raw = sp_oauth.get_access_token(code, as_dict=True)
-            token_info = raw
+            token_info = sp_oauth.get_access_token(code, as_dict=True)
             st.session_state["token_info"] = token_info
         except SpotifyOauthError:
             st.error("⚠️ Spotify auth failed. Please try again.")
             st.session_state.pop("token_info", None)
             token_info = None
+        # Clear URL and rerun once
         st.experimental_set_query_params()
         st.experimental_rerun()
+    # Refresh if expired
     if token_info and sp_oauth.is_token_expired(token_info):
-        refreshed = sp_oauth.refresh_access_token(token_info["refresh_token"])
-        st.session_state["token_info"] = refreshed
-        token_info = refreshed
+        token_info = sp_oauth.refresh_access_token(token_info["refresh_token"])
+        st.session_state["token_info"] = token_info
     return token_info
 
 # ─── Main flow ───
 token_info = get_token()
 
+# Title and login link if not authenticated (or prompt to upload)
 if not token_info:
     st.title("SonicMirror – Log in or Upload Exportify Files")
 else:
@@ -60,7 +63,7 @@ else:
     user = sp.current_user()
     st.sidebar.markdown(f"**Logged in as:** {user.get('display_name','')} ({user.get('id','')})")
 
-# ─── Dual Input: Spotify or Exportify Upload ───
+# ─── Dual Input: Spotify & Upload ───
 col1, col2 = st.columns(2)
 with col1:
     if token_info:
@@ -77,26 +80,32 @@ with col2:
         type=["csv", "xls", "xlsx"],
         accept_multiple_files=True
     )
-    # robust parsing with error handling
     if uploaded:
         parsed = []
         for f in uploaded:
-            base = f.name.rsplit(".", 1)[0]
+            base = f.name.rsplit('.', 1)[0]
             try:
-                if f.name.lower().endswith(".csv"):
+                if f.name.lower().endswith('.csv'):
                     tmp = pd.read_csv(f)
                 else:
                     sheets = pd.read_excel(f, sheet_name=None)
                     tmp = pd.concat(sheets.values(), ignore_index=True)
-                tmp["Playlist"] = base
+                # Normalize columns for consistency
+                if 'Artist Name(s)' in tmp.columns:
+                    tmp.rename(columns={'Artist Name(s)': 'Artist'}, inplace=True)
+                if 'Artist' not in tmp.columns and 'Artist Name' in tmp.columns:
+                    tmp.rename(columns={'Artist Name': 'Artist'}, inplace=True)
+                if 'Track Name' not in tmp.columns and 'Name' in tmp.columns:
+                    tmp.rename(columns={'Name': 'Track Name'}, inplace=True)
+                tmp['Playlist'] = base
                 parsed.append(tmp)
                 st.success(f"Loaded {f.name}: {len(tmp)} rows")
             except Exception as e:
                 st.error(f"Error reading {f.name}: {e}")
         if parsed:
-            st.session_state.setdefault("uploaded_dfs", []).extend(parsed)
+            st.session_state.setdefault('uploaded_dfs', []).extend(parsed)
 
-# ─── Combine DataFrames ───
+# ─── Assemble DataFrames ───
 all_dfs = []
 # From Spotify
 if token_info and selected:
@@ -111,19 +120,20 @@ if token_info and selected:
                     tracks.append(t)
                     ids.append(t.get('id'))
             results = sp.next(results) if results.get('next') else None
-        # fetch features
+        # Batch fetch audio features
         features = {}
         for i in range(0, len(ids), 100):
-            batch = ids[i:i+100]
-            for finfo in sp.audio_features(batch) or []:
-                if finfo and finfo.get('id'):
-                    features[finfo['id']] = finfo
+            for f in sp.audio_features(ids[i:i+100]) or []:
+                if f and f.get('id'):
+                    features[f['id']] = f
         rows = []
         for t in tracks:
             af = features.get(t.get('id'), {})
-            row = { 'Playlist': name, 'Track Name': t.get('name'),
-                    'Artist': ', '.join(a['name'] for a in t.get('artists', [])) }
-            # add audio features
+            row = {
+                'Playlist': name,
+                'Track Name': t.get('name'),
+                'Artist': ', '.join(a['name'] for a in t.get('artists', []))
+            }
             for feat in ['energy','valence','danceability','acousticness',
                          'instrumentalness','liveness','tempo','speechiness',
                          'loudness','key']:
@@ -131,20 +141,22 @@ if token_info and selected:
             rows.append(row)
         all_dfs.append(pd.DataFrame(rows))
 # From uploads
-if st.session_state.get("uploaded_dfs"):
-    all_dfs.extend(st.session_state["uploaded_dfs"])
+if st.session_state.get('uploaded_dfs'):
+    all_dfs.extend(st.session_state['uploaded_dfs'])
 
 # ─── Render Report ───
 if all_dfs:
-    df = pd.concat(all_dfs, ignore_index=True).dropna(subset=["Track Name","Artist"])
+    df = pd.concat(all_dfs, ignore_index=True)
+    # Drop rows missing core columns
+    df = df.dropna(subset=['Track Name', 'Artist'])
     st.subheader("📋 Combined Playlist Overview")
     st.write(f"**Total tracks:** {len(df)}")
     st.dataframe(df.head())
 
-    # Export CSV
+    # Download merged data
     buffer = io.StringIO()
     df.to_csv(buffer, index=False)
-    st.download_button("📥 Download combined CSV", buffer.getvalue().encode('utf-8'), "combined.csv")
+    st.download_button("📥 Download combined CSV", buffer.getvalue().encode('utf-8'), 'combined.csv')
 
     # ─── Charting code goes here ───
     # (Mood maps, radar, histograms, word clouds, etc.)
