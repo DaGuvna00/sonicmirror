@@ -317,6 +317,7 @@ def fetch_sentiments(tracks, token):
     """
     Fetch lyrics and compute sentiment polarity for a list of track entries.
     Each entry is a dict with keys: 'Track', 'Artist', 'Playlist'.
+    Returns list of dicts with added fields: 'Polarity', 'LyricsFound', 'LyricsLength'.
     """
     # Ensure TextBlob corpora
     try:
@@ -331,20 +332,28 @@ def fetch_sentiments(tracks, token):
     for entry in tracks:
         title = entry['Track']
         artist = entry['Artist'].split(',')[0]
+        lyrics = None
         try:
             song = genius.search_song(title, artist)
             if song and hasattr(song, 'lyrics'):
                 lyrics = song.lyrics
-                polarity = TextBlob(lyrics).sentiment.polarity
-            else:
-                polarity = None
         except Exception:
+            lyrics = None
+        if lyrics:
+            lyrics_found = True
+            lyr_len = len(lyrics)
+            polarity = TextBlob(lyrics).sentiment.polarity
+        else:
+            lyrics_found = False
+            lyr_len = 0
             polarity = None
         results.append({
             'Playlist': entry['Playlist'],
             'Track': title,
             'Artist': artist,
-            'Polarity': polarity
+            'Polarity': polarity,
+            'LyricsFound': lyrics_found,
+            'LyricsLength': lyr_len
         })
     return results
 
@@ -358,24 +367,35 @@ if genius_token:
     if st.button("💭 Analyze Lyrics Sentiment"):
         with st.spinner("Fetching lyrics and computing sentiment…"):
             sentiment_data = fetch_sentiments(tracks_unique, genius_token)
-        if sentiment_data:
-            sent_df = pd.DataFrame(sentiment_data).dropna(subset=['Polarity'])
-            if not sent_df.empty:
-                avg_sent = sent_df.groupby('Playlist')['Polarity'].mean().round(3)
-                st.subheader("Average Lyrics Sentiment by Playlist")
-                fig_sent, ax_sent = plt.subplots()
-                avg_sent.plot(kind='bar', ax=ax_sent)
-                ax_sent.set_ylabel('Polarity')
-                ax_sent.set_title('Average Lyrics Sentiment')
-                st.pyplot(fig_sent)
+        # Convert to DataFrame including debug fields
+        sent_df = pd.DataFrame(sentiment_data)
+        # Show debug info
+        st.subheader("🔍 Sentiment Analysis Debug")
+        sent_count = len(sent_df)
+        found_count = sent_df['LyricsFound'].sum()
+        st.write(f"Processed {sent_count} tracks: lyrics found for {found_count}, missing for {sent_count - found_count}.")
+        # Display first few missing lyrics
+        missing = sent_df[~sent_df['LyricsFound']].head(10)
+        if not missing.empty:
+            st.markdown("**Tracks with no lyrics retrieved (first 10):**")
+            st.dataframe(missing[['Playlist','Track','Artist']])
+        # Drop tracks with no polarity
+        valid = sent_df.dropna(subset=['Polarity'])
+        st.write(f"Tracks with sentiment polarity: {len(valid)}")
+        if not valid.empty:
+            avg_sent = valid.groupby('Playlist')['Polarity'].mean().round(3)
+            st.subheader("Average Lyrics Sentiment by Playlist")
+            fig_sent, ax_sent = plt.subplots()
+            avg_sent.plot(kind='bar', ax=ax_sent)
+            ax_sent.set_ylabel('Polarity')
+            ax_sent.set_title('Average Lyrics Sentiment')
+            st.pyplot(fig_sent)
 
-                st.subheader("Top Positive Tracks")
-                st.dataframe(sent_df.nlargest(10, 'Polarity').reset_index(drop=True))
-                st.subheader("Top Negative Tracks")
-                st.dataframe(sent_df.nsmallest(10, 'Polarity').reset_index(drop=True))
-            else:
-                st.error("⚠️ No sentiment polarity computed. Check your token and network.")
+            st.subheader("Top Positive Tracks")
+            st.dataframe(valid.nlargest(10, 'Polarity').reset_index(drop=True)[['Playlist','Track','Artist','Polarity']])
+            st.subheader("Top Negative Tracks")
+            st.dataframe(valid.nsmallest(10, 'Polarity').reset_index(drop=True)[['Playlist','Track','Artist','Polarity']])
         else:
-            st.error("⚠️ fetch_sentiments returned no data. Something went wrong.")
+            st.error("⚠️ No sentiment polarity computed. Check your token and network.")
 else:
     st.warning("🔑 Add your GENIUS_TOKEN to Streamlit secrets to enable lyrics sentiment analysis.")
