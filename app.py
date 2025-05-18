@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from wordcloud import WordCloud
 import spotipy
-from spotipy.oauth2 import SpotifyOAuth
+from spotipy.oauth2 import SpotifyOAuth, SpotifyOauthError
 
 # --- Streamlit Setup ---
 st.set_page_config(page_title="SonicMirror - Playlist Analyzer", layout="wide")
@@ -35,12 +35,12 @@ code = query_params.get("code", [None])[0]
 # 3) (Optional) Debug view
 st.write("🔍 query_params:", query_params)
 st.write("🔍 code:", code)
-st.write("🔍 session_state:", dict(st.session_state))
+st.write("🔍 session_state keys:", list(st.session_state.keys()))
 
 # 4) Exchange code for token (only once)
 if code and "token_info" not in st.session_state:
     try:
-        # No more as_dict=True
+        # no more as_dict=True
         raw = sp_oauth.get_access_token(code)
         if isinstance(raw, dict):
             token_info = raw
@@ -52,19 +52,25 @@ if code and "token_info" not in st.session_state:
         if not access_token:
             raise RuntimeError("No access token returned by Spotify")
 
+        # store and clear URL so we don't retry with same code
         st.session_state.token_info = token_info
-        # Clear the URL so we don’t keep using the code
         st.query_params = {}
         st.experimental_rerun()
-    except Exception as e:
-        st.error("Spotify token exchange failed.")
-        st.exception(e)
-        st.stop()
+
+    except SpotifyOauthError as e:
+        # catch the “invalid_grant” and clear it for the user
+        if "invalid_grant" in str(e):
+            st.warning("❗️ Authorization code expired or invalid. Redirecting to login…")
+            st.query_params = {}
+            st.experimental_rerun()
+        else:
+            st.error("Spotify token exchange failed.")
+            st.exception(e)
+            st.stop()
 
 # 5) Refresh token if expired
 if "token_info" in st.session_state:
     token_info = st.session_state.token_info
-    # Spotipy’s is_token_expired expects a dict
     if isinstance(token_info, dict) and sp_oauth.is_token_expired(token_info):
         try:
             token_info = sp_oauth.refresh_access_token(token_info["refresh_token"])
@@ -74,7 +80,7 @@ if "token_info" in st.session_state:
             st.exception(e)
             st.stop()
 
-    # 6) Use the token to initialize Spotipy client
+    # 6) Initialize Spotipy client
     access_token = (
         token_info["access_token"]
         if isinstance(token_info, dict)
@@ -90,32 +96,30 @@ if "token_info" in st.session_state:
         st.exception(e)
 
     # --- Playlist Selection & Feature Fetching ---
-    playlists = sp.current_user_playlists(limit=50)
-    names = [pl["name"] for pl in playlists["items"]]
-    ids   = [pl["id"]   for pl in playlists["items"]]
-    choice = st.selectbox("🎧 Choose a Playlist", names)
+    playlists = sp.current_user_playlists(limit=50)["items"]
+    names = [pl["name"] for pl in playlists]
+    ids   = [pl["id"]   for pl in playlists]
+    choice = st.selectbox("🎧 Choose a Playlist", [""] + names)
 
     if choice:
         pid = ids[names.index(choice)]
-        tracks = sp.playlist_tracks(pid)["items"]
-        track_ids = []
-        track_names = []
-        artists = []
+        items = sp.playlist_tracks(pid)["items"]
+        ids_, names_, artists_ = [], [], []
 
-        for item in tracks:
-            t = item["track"]
+        for item in items:
+            t = item.get("track", {})
             if t and t.get("id") and t.get("is_playable", True):
-                track_ids.append(t["id"])
-                track_names.append(t["name"])
-                artists.append(", ".join(a["name"] for a in t["artists"]))
+                ids_.append(t["id"])
+                names_.append(t["name"])
+                artists_.append(", ".join(a["name"] for a in t["artists"]))
 
-        if track_ids:
-            af = sp.audio_features(track_ids)
-            if af:
-                df = pd.DataFrame(af)
-                df["Track Name"]    = track_names
-                df["Artist Name(s)"] = artists
-                df["Playlist"]      = choice
+        if ids_:
+            feats = sp.audio_features(ids_)
+            if feats:
+                df = pd.DataFrame(feats)
+                df["Track Name"]     = names_
+                df["Artist Name(s)"] = artists_
+                df["Playlist"]       = choice
                 st.session_state.setdefault("all_dfs", []).append(df)
             else:
                 st.error("No audio features returned.")
@@ -126,27 +130,27 @@ uploaded = st.file_uploader(
     type=["csv","xls","xlsx"], 
     accept_multiple_files=True
 )
-
 if uploaded:
     for f in uploaded:
-        name = f.name.rsplit(".",1)[0]
+        base = f.name.rsplit(".",1)[0]
         if f.name.endswith(".csv"):
             tmp = pd.read_csv(f)
         else:
             xls = pd.ExcelFile(f)
             tmp = pd.concat([xls.parse(s) for s in xls.sheet_names], ignore_index=True)
-        tmp["Playlist"] = name
+        tmp["Playlist"] = base
         st.session_state.setdefault("all_dfs", []).append(tmp)
 
-# 8) If we have any dataframes, build the report
-if "all_dfs" in st.session_state and st.session_state["all_dfs"]:
+# 8) Build the report when we have data
+if st.session_state.get("all_dfs"):
     df = pd.concat(st.session_state["all_dfs"], ignore_index=True)
     df = df.dropna(subset=["Track Name","Artist Name(s)"])
     st.subheader("📋 Playlist Overview")
     st.write(f"**Tracks loaded:** {len(df)}")
     st.dataframe(df[["Track Name","Artist Name(s)","Playlist"]].head())
 
-    # … your existing chart/report code here …
+    # … your existing charts & tables here …
+
 
 
     # 🎛 Averages
