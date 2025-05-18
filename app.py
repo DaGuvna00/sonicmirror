@@ -11,9 +11,9 @@ st.set_page_config(page_title="SonicMirror - Playlist Analyzer", layout="wide")
 st.title("🎶 SonicMirror – Analyze Your Spotify Playlists")
 
 # --- Spotify Auth Setup ---
-SPOTIPY_CLIENT_ID = st.secrets["SPOTIPY_CLIENT_ID"]
+SPOTIPY_CLIENT_ID     = st.secrets["SPOTIPY_CLIENT_ID"]
 SPOTIPY_CLIENT_SECRET = st.secrets["SPOTIPY_CLIENT_SECRET"]
-SPOTIPY_REDIRECT_URI = "https://sonicmirror.streamlit.app"
+SPOTIPY_REDIRECT_URI  = "https://sonicmirror.streamlit.app"
 scope = "playlist-read-private playlist-read-collaborative"
 
 sp_oauth = SpotifyOAuth(
@@ -24,48 +24,76 @@ sp_oauth = SpotifyOAuth(
     show_dialog=True
 )
 
+# Generate & show the auth URL
 auth_url = sp_oauth.get_authorize_url()
 st.markdown(f"[🔐 Log in with Spotify]({auth_url})")
 
-# --- Spotify OAuth Token Management ---
+# Storage for all dataframes
 all_dfs = []
 
-# Step 1: Get query params ONCE
-query_params = st.query_params
+# 1) Grab the ?code= query param
+query_params = st.experimental_get_query_params()
 code = query_params.get("code", [None])[0]
 
-# Step 2: Debug view
-st.write("🔍 Debug: query_params", query_params)
-st.write("🔍 Debug: code", code)
-st.write("🔍 Debug: session_state", dict(st.session_state))
+# 2) Debug output (optional)
+st.write("🔍 query_params:", query_params)
+st.write("🔍 code:", code)
+st.write("🔍 session_state:", dict(st.session_state))
 
-# Step 3–4: Exchange code for token immediately and rerun cleanly
+# 3) Exchange code for token (only once)
 if code and "token_info" not in st.session_state:
     try:
-        token_info = sp_oauth.get_access_token(code, as_dict=True)
-        if token_info and token_info.get("access_token"):
-            st.session_state["token_info"] = token_info
-            st.query_params = {}  # Clear code from URL immediately
-            st.experimental_rerun()  # Rerun fresh without ?code=...
+        raw = sp_oauth.get_access_token(code)   # no more as_dict=True
+        # handle both dict-style (old) and string-style (future)
+        if isinstance(raw, dict):
+            token_info = raw
+            access_token = token_info.get("access_token")
         else:
-            st.error("Failed to get Spotify token. Please log in again.")
-            st.stop()
+            access_token = raw
+            token_info = {"access_token": access_token}
+        if not access_token:
+            raise RuntimeError("No access_token in response")
+        # store and clear the URL
+        st.session_state.token_info = token_info
+        st.experimental_set_query_params()  # clear ?code
+        st.experimental_rerun()
     except Exception as e:
         st.error("Spotify token exchange failed.")
         st.exception(e)
         st.stop()
 
-# Step 5: Refresh token if expired
+# 4) Refresh if expired
 if "token_info" in st.session_state:
-    if sp_oauth.is_token_expired(st.session_state["token_info"]):
+    token_info = st.session_state.token_info
+    # Spotipy’s is_token_expired currently expects the dict format
+    if isinstance(token_info, dict) and sp_oauth.is_token_expired(token_info):
         try:
-            st.session_state["token_info"] = sp_oauth.refresh_access_token(
-                st.session_state["token_info"]["refresh_token"]
-            )
+            # refresh_access_token returns a dict
+            token_info = sp_oauth.refresh_access_token(token_info["refresh_token"])
+            st.session_state.token_info = token_info
         except Exception as e:
-            st.error("Token refresh failed. Please log in again.")
+            st.error("Token refresh failed; please log in again.")
             st.exception(e)
             st.stop()
+
+    # 5) Use the token
+    access_token = (
+        token_info["access_token"]
+        if isinstance(token_info, dict)
+        else token_info
+    )
+    sp = spotipy.Spotify(auth=access_token)
+    try:
+        user = sp.current_user()
+        st.success(f"✅ Logged in as {user['display_name']}")
+    except Exception as e:
+        st.error("Failed to fetch user profile.")
+        st.exception(e)
+
+    # --- now you can list playlists, fetch tracks, features, etc. ---
+
+# … the rest of your playlist‐loading and charting code unchanged …
+
 
     # Step 6: Confirm successful login and get user profile
     access_token = st.session_state["token_info"].get("access_token")
