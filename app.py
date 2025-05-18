@@ -10,10 +10,10 @@ from spotipy.oauth2 import SpotifyOAuth
 st.set_page_config(page_title="SonicMirror – Playlist Analyzer", layout="wide")
 
 # ─── OAuth settings ───
-CLIENT_ID = st.secrets["SPOTIPY_CLIENT_ID"]
+CLIENT_ID     = st.secrets["SPOTIPY_CLIENT_ID"]
 CLIENT_SECRET = st.secrets["SPOTIPY_CLIENT_SECRET"]
-REDIRECT_URI = "https://sonicmirror.streamlit.app"
-SCOPE = "user-read-private playlist-read-private playlist-read-collaborative"
+REDIRECT_URI  = "https://sonicmirror.streamlit.app"
+SCOPE         = "user-read-private playlist-read-private playlist-read-collaborative"
 
 sp_oauth = SpotifyOAuth(
     client_id=CLIENT_ID,
@@ -25,20 +25,23 @@ sp_oauth = SpotifyOAuth(
 
 # ─── Authentication helper ───
 def get_token():
-    # Try loading from session or cache
+    # Load from session or cache
     token_info = st.session_state.get("token_info") or sp_oauth.get_cached_token()
 
-    # Check for redirect with code
-    params = st.experimental_get_query_params()
-    if params.get("code"):
-        code = params["code"][0]
-        token_info = sp_oauth.get_access_token(code)
+    # If Spotify redirected back with a code, exchange it
+    params = st.query_params
+    code_list = params.get("code")
+    if code_list:
+        code = code_list[0]
+        raw = sp_oauth.get_access_token(code)
+        # Handle both dict and string return
+        token_info = raw if isinstance(raw, dict) else {"access_token": raw}
         st.session_state["token_info"] = token_info
-        # Clear query params and rerun
-        st.experimental_set_query_params()
-        st.experimental_rerun()
+        # Clear query params and rerun app
+        st.query_params = {}
+        st.rerun()
 
-    # Refresh if expired
+    # Refresh token if expired
     if token_info and sp_oauth.is_token_expired(token_info):
         token_info = sp_oauth.refresh_access_token(token_info["refresh_token"])
         st.session_state["token_info"] = token_info
@@ -47,16 +50,16 @@ def get_token():
 
 # ─── Main flow ───
 token_info = get_token()
+
+# 1) Prompt login if no token
 if not token_info:
     st.title("SonicMirror – Log in with Spotify")
     auth_url = sp_oauth.get_authorize_url()
     st.markdown(f"[🔐 Log in with Spotify]({auth_url})")
     st.stop()
 
-# User is authenticated
+# 2) Authenticated: build Spotify client
 sp = spotipy.Spotify(auth=token_info["access_token"])
-
-# Sidebar user info
 user = sp.current_user()
 st.sidebar.markdown(f"**Logged in as:** {user.get('display_name')} ({user.get('id')})")
 
@@ -65,31 +68,39 @@ playlists = sp.current_user_playlists(limit=50).get('items', [])
 options = {p['name']: p['id'] for p in playlists}
 selected = st.multiselect("Select playlist(s)", list(options.keys()))
 
-# ─── Fetch and compile tracks ───
+# ─── Fetch tracks and build DataFrame ───
 if selected:
     all_tracks = []
     for name in selected:
         pid = options[name]
+        # fetch items, then audio features
+        tracks = []
         results = sp.playlist_items(pid, additional_types=['track'])
         while results:
             for item in results['items']:
                 track = item.get('track')
                 if track:
-                    all_tracks.append({
-                        'Playlist': name,
-                        'Track Name': track.get('name'),
-                        'Artist': ', '.join([a['name'] for a in track.get('artists', [])]),
-                        'Energy': track['energy'] if 'energy' in track else None,
-                        # add more features if needed
-                    })
-            if results.get('next'):
-                results = sp.next(results)
-            else:
-                results = None
+                    tracks.append(track)
+            results = sp.next(results) if results.get('next') else None
+        # get audio features in batch
+        ids = [t['id'] for t in tracks if t.get('id')]
+        features = {f['id']: f for f in sp.audio_features(ids) if f}
+        for t in tracks:
+            fid = t.get('id')
+            af = features.get(fid, {})
+            all_tracks.append({
+                'Playlist': name,
+                'Track Name': t.get('name'),
+                'Artist': ', '.join([a['name'] for a in t.get('artists', [])]),
+                **{k: af.get(k) for k in ['energy','valence','danceability','acousticness','instrumentalness','liveness','tempo','speechiness','loudness','key']}
+            })
     df = pd.DataFrame(all_tracks)
     st.subheader("📋 Playlist Overview")
     st.write(f"**Tracks loaded:** {len(df)}")
     st.dataframe(df.head())
+
+    # ─── Your charting code goes here ───
+    # (Insert your mood map, radar, histograms, word clouds, etc.)
 
 # 7) Handle Exportify file uploads
 uploaded = st.file_uploader(
