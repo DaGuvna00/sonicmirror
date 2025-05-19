@@ -598,7 +598,7 @@ if 'ReleaseDate' in df.columns:
 
 else:
     st.info("Release dates not available for time travel.")
-
+    
 import matplotlib.pyplot as plt
 from PIL import Image
 from io import BytesIO
@@ -653,7 +653,7 @@ if 'Artist' in df.columns:
             ax.text(0.5, y_start, title, fontsize=24, fontweight='bold', ha='center', color='white', zorder=1, fontproperties=custom_font)
             ax.text(0.5, y_start - 0.05, artists[0], fontsize=34, fontweight='bold', ha='center', color='gold', zorder=1, fontproperties=custom_font)
             ax.text(0.5, y_start - 0.10, ' • '.join(artists[1:4]), fontsize=18, ha='center', color='white', zorder=1, fontproperties=custom_font)
-            ax.text(0.5, y_start - 0.15, ' • '.join(artists[4:8]), fontsize=14, ha='center', color='lightgray', zorder=1, family=font_family)
+            ax.text(0.5, y_start - 0.15, ' • '.join(artists[4:8]), fontsize=14, ha='center', color='lightgray', zorder=1, fontproperties=custom_font)
             ax.text(0.5, y_start - 0.22, '\n'.join([' • '.join(artists[i:i+6]) for i in range(8, len(artists), 6)]), fontsize=12, ha='center', color='lightgray', zorder=1, family=font_family)
 
         for dx, dy in [(-0.002, -0.002), (0.002, -0.002), (-0.002, 0.002), (0.002, 0.002)]:
@@ -673,3 +673,4 @@ if 'Artist' in df.columns:
     st.download_button("📥 Download Poster", poster_buf, file_name="sonicmirror_festival.png", mime="image/png")
 else:
     st.info("Artist data missing — can't build your lineup.")
+
