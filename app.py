@@ -454,3 +454,35 @@ if all(col in df.columns for col in ['Energy', 'Valence', 'Danceability']):
         st.markdown(f"**{mood}** → *{track['Track']}* by *{track['Artist']}*")
 else:
     st.info("Not enough data to generate mood profiles.")
+
+# ─── Audio Fingerprint Comparison ───
+st.header("🆚 Audio Fingerprint Comparison")
+
+compare_choices = st.multiselect(
+    "Pick 2 playlists to compare",
+    df['Playlist'].unique().tolist(),
+    default=selected[:2]
+)
+
+if len(compare_choices) == 2:
+    p1, p2 = compare_choices
+    p1_avg = df[df['Playlist'] == p1][selected_feats].mean()
+    p2_avg = df[df['Playlist'] == p2][selected_feats].mean()
+
+    delta = (p1_avg - p2_avg).sort_values(key=lambda x: abs(x), ascending=False)
+    biggest_diffs = delta.head(5).index.tolist()
+
+    fig, ax = plt.subplots()
+    width = 0.35
+    x = np.arange(len(biggest_diffs))
+    ax.bar(x - width/2, p1_avg[biggest_diffs], width, label=p1)
+    ax.bar(x + width/2, p2_avg[biggest_diffs], width, label=p2)
+    ax.set_xticks(x)
+    ax.set_xticklabels(biggest_diffs, rotation=45)
+    ax.set_ylabel("Average Value")
+    ax.set_title("Top 5 Audio Feature Differences")
+    ax.legend()
+    st.pyplot(fig)
+
+else:
+    st.info("Please select exactly 2 playlists to compare.")
