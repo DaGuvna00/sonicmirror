@@ -547,3 +547,25 @@ if 'Tempo' in df.columns and 'Loudness' in df.columns:
     st.pyplot(fig)
 else:
     st.info("Tempo and loudness data not available.")
+
+# ─── Playlist Rarity Index ───
+st.header("🧬 Playlist Rarity Index")
+
+if 'Popularity' in df.columns:
+    rarity = (
+        df.dropna(subset=['Popularity'])
+        .groupby('Playlist')['Popularity']
+        .mean()
+        .sort_values()
+        .round(1)
+    )
+
+    fig, ax = plt.subplots()
+    rarity.plot(kind='barh', ax=ax, color='purple')
+    ax.set_xlabel("Average Track Popularity (0 = rare, 100 = mainstream)")
+    ax.set_title("Which Playlists Are the Most Underground?")
+    st.pyplot(fig)
+
+    st.caption("Lower = rarer. Spotify popularity score is based on streams and trending status.")
+else:
+    st.info("Popularity data is missing. Can't compute rarity.")
