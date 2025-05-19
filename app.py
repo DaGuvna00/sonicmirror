@@ -486,3 +486,45 @@ if len(compare_choices) == 2:
 
 else:
     st.info("Please select exactly 2 playlists to compare.")
+
+# ─── Artist Depth Meter ───
+st.header("🔍 Artist Depth Meter")
+
+if 'Artist' in df.columns and 'Popularity' in df.columns:
+    # Expand multi-artist tracks
+    rows = []
+    for _, row in df.dropna(subset=['Artist']).iterrows():
+        artists = [a.strip() for a in str(row['Artist']).split(',')]
+        for artist in artists:
+            rows.append({
+                'Artist': artist,
+                'Track': row['Track'],
+                'Popularity': row.get('Popularity', np.nan)
+            })
+
+    depth_df = pd.DataFrame(rows)
+    artist_summary = (
+        depth_df.groupby('Artist')
+        .agg({'Track': 'count', 'Popularity': 'mean'})
+        .rename(columns={'Track': 'Track Count', 'Popularity': 'Avg Popularity'})
+        .sort_values('Track Count', ascending=False)
+        .head(10)
+        .reset_index()
+    )
+
+    st.dataframe(artist_summary.style.format({'Avg Popularity': '{:.1f}'}))
+
+    fig, ax = plt.subplots()
+    ax.scatter(
+        artist_summary['Track Count'],
+        artist_summary['Avg Popularity'],
+        s=100
+    )
+    for _, row in artist_summary.iterrows():
+        ax.text(row['Track Count']+0.1, row['Avg Popularity'], row['Artist'], fontsize=8)
+    ax.set_xlabel("Track Count")
+    ax.set_ylabel("Avg Popularity")
+    ax.set_title("Your Listening Depth by Artist")
+    st.pyplot(fig)
+else:
+    st.info("Artist or popularity data missing.")
