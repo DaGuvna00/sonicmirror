@@ -617,8 +617,8 @@ if 'Artist' in df.columns:
         all_artists.extend([x.strip() for x in str(a).split(',')])
 
     artist_counts = Counter(all_artists)
-    top_20 = artist_counts.most_common(20)
-    top_artists = [a for a, _ in top_20]
+    top_30 = artist_counts.most_common(30)
+    top_artists = [a for a, _ in top_30]
 
     # Split into two days
     midpoint = len(top_artists) // 2
