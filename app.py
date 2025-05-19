@@ -624,33 +624,44 @@ if 'Artist' in df.columns:
     day_2 = top_artists[midpoint:]
 
     def build_poster(day1, day2):
-        fig, ax = plt.subplots(figsize=(10, 16))  # increased size to fit more
-        ax.axis('off')
+    fig, ax = plt.subplots(figsize=(10, 16))  # increased size to fit more
+    ax.axis('off')
 
-        # Load background image (no text on it)
-        bg_path = "festival_background.jpg"  # ensure this file has no text baked in
-        if os.path.exists(bg_path):
-            bg_img = Image.open(bg_path)
-            ax.imshow(bg_img, extent=[0, 1, 0, 1], aspect='auto', zorder=0)
-        else:
-            ax.set_facecolor("#121212")
-            fig.patch.set_facecolor("#121212")
+    # Load background image
+    bg_path = "festival_background.jpg"
+    if os.path.exists(bg_path):
+        bg_img = Image.open(bg_path)
+        ax.imshow(bg_img, extent=[0, 1, 0, 1], aspect='auto', zorder=0)
+    else:
+        ax.set_facecolor("#121212")
+        fig.patch.set_facecolor("#121212")
 
-        def draw_day(title, artists, y_start):
-            ax.text(0.5, y_start, title, fontsize=24, fontweight='bold', ha='center', color='white', zorder=1, family='monospace')
-            for dx, dy in [(-0.002, -0.002), (0.002, -0.002), (-0.002, 0.002), (0.002, 0.002)]:
-                ax.text(0.5 + dx, 0.96 + dy, "SONICMIRROR FESTIVAL", fontsize=28, fontweight='bold', ha='center', color='black', zorder=1, family='monospace')
-                ax.text(0.5, 0.96, "SONICMIRROR FESTIVAL", fontsize=28, fontweight='bold', ha='center', color='white', zorder=1, family='monospace')
-        draw_day("DAY 1", day_1, 0.88)
-        draw_day("DAY 2", day_2, 0.48)
+    # Draw glowing title text
+    for dx, dy in [(-0.002, -0.002), (0.002, -0.002), (-0.002, 0.002), (0.002, 0.002)]:
+        ax.text(0.5 + dx, 0.96 + dy, "SONICMIRROR FESTIVAL", fontsize=28, fontweight='bold',
+                ha='center', color='black', zorder=1, family='monospace')
+    ax.text(0.5, 0.96, "SONICMIRROR FESTIVAL", fontsize=28, fontweight='bold',
+            ha='center', color='white', zorder=1, family='monospace')
 
-        buf = BytesIO()
-        plt.savefig(buf, format='png', bbox_inches='tight')
-        buf.seek(0)
-        return buf
+    # Draw artist lineup for each day
+    def draw_day(title, artists, y_start):
+        ax.text(0.5, y_start, title, fontsize=24, fontweight='bold',
+                ha='center', color='white', zorder=1, family='monospace')
+        ax.text(0.5, y_start - 0.05, artists[0], fontsize=34, fontweight='bold',
+                ha='center', color='gold', zorder=1, family='monospace')
+        ax.text(0.5, y_start - 0.10, ' • '.join(artists[1:4]), fontsize=18,
+                ha='center', color='white', zorder=1, family='monospace')
+        ax.text(0.5, y_start - 0.15, ' • '.join(artists[4:8]), fontsize=14,
+                ha='center', color='lightgray', zorder=1, family='monospace')
+        ax.text(0.5, y_start - 0.22,
+                '\n'.join([' • '.join(artists[i:i+6]) for i in range(8, len(artists), 6)]),
+                fontsize=12, ha='center', color='lightgray', zorder=1, family='monospace')
 
-    poster_buf = build_poster(day_1, day_2)
-    st.image(poster_buf, caption="Your Festival Lineup", use_container_width=True)
-    st.download_button("📥 Download Poster", poster_buf, file_name="sonicmirror_festival.png", mime="image/png")
-else:
-    st.info("Artist data missing — can't build your lineup.")
+    draw_day("DAY 1", day1, 0.88)
+    draw_day("DAY 2", day2, 0.48)
+
+    buf = BytesIO()
+    plt.savefig(buf, format='png', bbox_inches='tight')
+    buf.seek(0)
+    return buf
+
