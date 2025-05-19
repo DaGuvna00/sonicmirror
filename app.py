@@ -86,8 +86,10 @@ ax.set_ylabel(feat)
 ax.set_title(f"Average {feat} by Playlist")
 st.pyplot(fig)
 
-# ─── Discovery Lag Distribution ───
+
+# ─── Discovery Lag Distribution (in Years) ───
 st.header("⏱ Discovery Lag Distribution (in Years)")
+
 fig2, ax2 = plt.subplots()
 for p in selected:
     subset = df[df['Playlist'] == p]
