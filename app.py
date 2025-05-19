@@ -702,3 +702,45 @@ if 'Artist' in df.columns:
 
 else:
     st.info("Artist data missing — can't build your lineup.")
+
+# ─── Vibe Moodboard ───
+st.header("🎭 Vibe Moodboard")
+
+if all(col in df.columns for col in ['Energy', 'Valence', 'Danceability', 'Acousticness', 'Instrumentalness']):
+    mood_counts = {
+        "🔥 Hype Mode": 0,
+        "😎 Chill Zone": 0,
+        "😢 Feels Trip": 0,
+        "🎉 Party Time": 0,
+        "🧠 Introspective": 0,
+        "🌌 Dreamwave": 0
+    }
+
+    for _, row in df.iterrows():
+        e, v, d, a, i = row['Energy'], row['Valence'], row['Danceability'], row['Acousticness'], row['Instrumentalness']
+        if e > 0.7 and d > 0.6:
+            mood_counts["🔥 Hype Mode"] += 1
+        elif e < 0.4 and a > 0.4:
+            mood_counts["😎 Chill Zone"] += 1
+        elif v < 0.3:
+            mood_counts["😢 Feels Trip"] += 1
+        elif d > 0.75 and v > 0.6:
+            mood_counts["🎉 Party Time"] += 1
+        elif i > 0.5 or (a > 0.5 and v < 0.5):
+            mood_counts["🧠 Introspective"] += 1
+        elif e < 0.6 and v > 0.5 and a > 0.3:
+            mood_counts["🌌 Dreamwave"] += 1
+
+    total = sum(mood_counts.values())
+    if total == 0:
+        st.info("Not enough data to generate moodboard.")
+    else:
+        sorted_moods = sorted(mood_counts.items(), key=lambda x: x[1], reverse=True)
+        st.markdown("Your playlist gives off these vibes:")
+        for emoji, count in sorted_moods:
+            if count > 0:
+                percent = round(count / total * 100)
+                st.markdown(f"{emoji} **{emoji[2:]}** – {percent}%")
+else:
+    st.info("Not enough audio data to build moodboard.")
+
