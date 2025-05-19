@@ -413,3 +413,44 @@ if 'Energy' in df.columns and 'Valence' in df.columns and 'AddedAt' in df.column
 else:
     st.info("Not enough data to plot emotional journey.")
 
+# ─── Mood Profile Clusters ───
+st.header("🧠 Your Top 5 Mood Profiles")
+
+from sklearn.cluster import KMeans
+from sklearn.preprocessing import StandardScaler
+
+if all(col in df.columns for col in ['Energy', 'Valence', 'Danceability']):
+    mood_features = df[['Energy', 'Valence', 'Danceability']].dropna()
+    mood_tracks = df.loc[mood_features.index][['Track', 'Artist', 'Playlist']].reset_index(drop=True)
+
+    scaler = StandardScaler()
+    scaled = scaler.fit_transform(mood_features)
+
+    kmeans = KMeans(n_clusters=5, random_state=42, n_init=10)
+    mood_tracks['Mood Cluster'] = kmeans.fit_predict(scaled)
+
+    # Assign rough mood labels (you can tweak these!)
+    labels = {
+        0: "💃 Club Bangers",
+        1: "☁️ Chill Vibes",
+        2: "🌧 Introspective",
+        3: "🏋️ Hype Mode",
+        4: "🎨 Artsy / Offbeat"
+    }
+    mood_tracks['Mood'] = mood_tracks['Mood Cluster'].map(labels)
+
+    top_moods = (
+        mood_tracks['Mood'].value_counts()
+        .head(5)
+        .reset_index(name='Track Count')
+        .rename(columns={'index': 'Mood'})
+    )
+
+    st.dataframe(top_moods)
+
+    st.subheader("🎧 Sample Track per Mood")
+    for mood in top_moods['Mood']:
+        track = mood_tracks[mood_tracks['Mood'] == mood].sample(1).iloc[0]
+        st.markdown(f"**{mood}** → *{track['Track']}* by *{track['Artist']}*")
+else:
+    st.info("Not enough data to generate mood profiles.")
