@@ -600,46 +600,65 @@ else:
     st.info("Release dates not available for time travel.")
 
 # ─── Festival Lineup Generator ───
-st.header("🎪 Your Playlist Festival Lineup")
+# ─── Stylized Festival Poster (Downloadable) ───
+from PIL import Image, ImageDraw, ImageFont
+import io
 
-def render_day(day_name, artists):
-    if len(artists) < 10:
-        st.warning("Need at least 10 artists for proper layout.")
-        return
+st.header("🖼 Stylized Festival Poster")
 
-    headliner = artists[0]
-    main_support = artists[1:4]
-    mid_card = artists[4:8]
-    openers = artists[8:]
+def generate_festival_poster(headliner, main_support, mid_card, openers, title="Your Playlist Festival"):
+    # Create base image
+    img = Image.new("RGB", (1000, 1400), color="#181818")
+    draw = ImageDraw.Draw(img)
 
-    st.subheader(f"🎤 {day_name}")
-    st.markdown(f"""
-    <div style="text-align: center; margin-bottom: 1em;">
-        <div style="font-size: 48px; font-weight: 900; margin: 0;">{headliner}</div>
-        <div style="font-size: 28px; font-weight: 700; margin: 0.2em 0;">{' • '.join(main_support)}</div>
-        <div style="font-size: 18px; font-weight: 500; color: #888; margin: 0.5em 0;">{' • '.join(mid_card)}</div>
-        <div style="font-size: 14px; color: #aaa;">{' • '.join(openers)}</div>
-    </div>
-    """, unsafe_allow_html=True)
+    # Load fonts (fallback to default if needed)
+    try:
+        title_font = ImageFont.truetype("DejaVuSans-Bold.ttf", 70)
+        head_font = ImageFont.truetype("DejaVuSans-Bold.ttf", 60)
+        support_font = ImageFont.truetype("DejaVuSans-Bold.ttf", 36)
+        mid_font = ImageFont.truetype("DejaVuSans.ttf", 28)
+        open_font = ImageFont.truetype("DejaVuSans.ttf", 22)
+    except:
+        title_font = head_font = support_font = mid_font = open_font = None
 
+    y = 80
+    draw.text((img.width//2, y), title, font=title_font, fill="white", anchor="mm")
+    y += 120
+    draw.text((img.width//2, y), headliner, font=head_font, fill="white", anchor="mm")
+    y += 100
+    draw.text((img.width//2, y), " • ".join(main_support), font=support_font, fill="#FFD700", anchor="mm")
+    y += 70
+    draw.text((img.width//2, y), " • ".join(mid_card), font=mid_font, fill="#AAAAAA", anchor="mm")
+    y += 50
+    draw.text((img.width//2, y), " • ".join(openers), font=open_font, fill="#888888", anchor="mm")
+
+    return img
+
+# Get artists from your top 20
 if 'Artist' in df.columns:
     from collections import Counter
-
     all_artists = []
     for a in df['Artist'].dropna():
         all_artists.extend([x.strip() for x in str(a).split(',')])
-
     artist_counts = Counter(all_artists)
-    top_20 = artist_counts.most_common(20)
-    top_artists = [a for a, _ in top_20]
+    top_artists = [a for a, _ in artist_counts.most_common(20)]
 
-    # Split evenly: top half vs bottom half
-    midpoint = len(top_artists) // 2
-    day_1 = top_artists[:midpoint]
-    day_2 = top_artists[midpoint:]
+    if len(top_artists) >= 10:
+        headliner = top_artists[0]
+        main_support = top_artists[1:4]
+        mid_card = top_artists[4:8]
+        openers = top_artists[8:15]
 
-    render_day("Day 1", day_1)
-    render_day("Day 2", day_2)
+        img = generate_festival_poster(headliner, main_support, mid_card, openers)
+
+        # Convert to byte stream
+        buf = io.BytesIO()
+        img.save(buf, format="PNG")
+        byte_im = buf.getvalue()
+
+        st.image(img, caption="Your Festival Poster", use_column_width=True)
+        st.download_button("📥 Download Poster", data=byte_im, file_name="festival_poster.png", mime="image/png")
+    else:
+        st.info("Need at least 10 artists to generate poster.")
 else:
-    st.info("Artist data missing — can't build your lineup.")
-
+    st.info("No artist data available for poster.")
