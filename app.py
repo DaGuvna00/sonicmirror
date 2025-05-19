@@ -807,26 +807,30 @@ def compute_avg_features(playlist):
 avg1 = compute_avg_features(playlist1)
 avg2 = compute_avg_features(playlist2)
 
-# Radar chart setup
-labels = list(avg1.keys())
-values1 = list(avg1.values())
-values2 = list(avg2.values())
-labels += [labels[0]]
-values1 += [values1[0]]
-values2 += [values2[0]]
+if not avg1 or not avg2:
+    st.warning("One or both playlists have no audio feature data.")
+else:
+    # Proceed with chart generation
+    labels = list(avg1.keys())
+    values1 = list(avg1.values())
+    values2 = list(avg2.values())
+    
+    labels += [labels[0]]
+    values1 += [values1[0]]
+    values2 += [values2[0]]
 
-angles = np.linspace(0, 2 * np.pi, len(labels), endpoint=False).tolist()
-angles += angles[:1]
+    angles = np.linspace(0, 2 * np.pi, len(labels), endpoint=False).tolist()
+    angles += angles[:1]
 
-fig, ax = plt.subplots(figsize=(6, 6), subplot_kw=dict(polar=True))
-ax.plot(angles, values1, label=playlist1, color="orange")
-ax.fill(angles, values1, alpha=0.25, color="orange")
-ax.plot(angles, values2, label=playlist2, color="teal")
-ax.fill(angles, values2, alpha=0.25, color="teal")
-ax.set_xticks(angles[:-1])
-ax.set_xticklabels(labels)
-ax.set_yticklabels([])
-ax.set_title("Playlist Feature Comparison", fontsize=14)
-ax.legend(loc='upper right', bbox_to_anchor=(1.3, 1.1))
+    fig, ax = plt.subplots(figsize=(6, 6), subplot_kw=dict(polar=True))
+    ax.plot(angles, values1, label=playlist1, color="orange")
+    ax.fill(angles, values1, alpha=0.25, color="orange")
+    ax.plot(angles, values2, label=playlist2, color="teal")
+    ax.fill(angles, values2, alpha=0.25, color="teal")
+    ax.set_xticks(angles[:-1])
+    ax.set_xticklabels(labels)
+    ax.set_yticklabels([])
+    ax.set_title("Playlist Feature Comparison", fontsize=14)
+    ax.legend(loc='upper right', bbox_to_anchor=(1.3, 1.1))
 
-st.pyplot(fig)
+    st.pyplot(fig)
