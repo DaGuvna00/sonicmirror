@@ -598,3 +598,48 @@ if 'ReleaseDate' in df.columns:
 
 else:
     st.info("Release dates not available for time travel.")
+
+# ─── Festival Lineup Generator ───
+st.header("🎪 Your Playlist Festival Lineup")
+
+def render_day(day_name, artists):
+    if len(artists) < 10:
+        st.warning("Need at least 10 artists for proper layout.")
+        return
+
+    headliner = artists[0]
+    main_support = artists[1:4]
+    mid_card = artists[4:8]
+    openers = artists[8:]
+
+    st.subheader(f"🎤 {day_name}")
+    st.markdown(f"""
+    <div style="text-align: center; margin-bottom: 1em;">
+        <div style="font-size: 48px; font-weight: 900; margin: 0;">{headliner}</div>
+        <div style="font-size: 28px; font-weight: 700; margin: 0.2em 0;">{' • '.join(main_support)}</div>
+        <div style="font-size: 18px; font-weight: 500; color: #888; margin: 0.5em 0;">{' • '.join(mid_card)}</div>
+        <div style="font-size: 14px; color: #aaa;">{' • '.join(openers)}</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+if 'Artist' in df.columns:
+    from collections import Counter
+
+    all_artists = []
+    for a in df['Artist'].dropna():
+        all_artists.extend([x.strip() for x in str(a).split(',')])
+
+    artist_counts = Counter(all_artists)
+    top_20 = artist_counts.most_common(20)
+    top_artists = [a for a, _ in top_20]
+
+    # Split evenly: top half vs bottom half
+    midpoint = len(top_artists) // 2
+    day_1 = top_artists[:midpoint]
+    day_2 = top_artists[midpoint:]
+
+    render_day("Day 1", day_1)
+    render_day("Day 2", day_2)
+else:
+    st.info("Artist data missing — can't build your lineup.")
+
