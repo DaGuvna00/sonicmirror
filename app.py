@@ -88,15 +88,16 @@ st.pyplot(fig)
 
 
 # ─── Discovery Lag Distribution (in Years) ───
-st.header("⏱ Discovery Lag Distribution (in Years)")
+st.header("⏱ Discovery Lag Distribution (Years)")
 
 fig2, ax2 = plt.subplots()
 for p in selected:
-    subset = df[df['Playlist'] == p]
+    subset = data[data['Playlist'] == p]
     ax2.hist(subset['LagYears'].dropna(), bins=30, alpha=0.5, label=p)
 
-ax2.set_xlabel('Lag (Years)')
+ax2.set_xlabel('Discovery Lag (Years)')
 ax2.set_ylabel('Track Count')
+ax2.set_title("How Long After Release Did You Add These Songs?")
 ax2.legend()
 st.pyplot(fig2)
 
