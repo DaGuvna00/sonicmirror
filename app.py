@@ -332,26 +332,34 @@ for slot, params in slots.items():
 
 # ─── Cross-Playlist Radar Comparison ───
 st.header("🕸️ Cross-Playlist Radar Comparison")
+
 # Select up to 4 playlists for radar
 radar_choices = st.multiselect(
     "Pick up to 4 playlists to compare", df['Playlist'].unique().tolist(), default=selected[:2]
 )
+
 if radar_choices:
-    metrics = selected_feats
+    # Remove 'Tempo' from selected features if it's present
+    metrics = [m for m in selected_feats if m.lower() != 'tempo']
+
     avg_vals = df[df['Playlist'].isin(radar_choices)].groupby('Playlist')[metrics].mean()
     angles = np.linspace(0, 2 * np.pi, len(metrics), endpoint=False).tolist()
     angles += angles[:1]
+
     fig_radar, ax_radar = plt.subplots(subplot_kw={"polar": True}, figsize=(6,6))
+
     for pname in radar_choices[:4]:
         vals = avg_vals.loc[pname].tolist()
         vals += vals[:1]
         ax_radar.plot(angles, vals, label=pname)
         ax_radar.fill(angles, vals, alpha=0.1)
+
     ax_radar.set_xticks(angles[:-1])
     ax_radar.set_xticklabels(metrics)
     ax_radar.set_title("Audio Feature Radar Comparison")
     ax_radar.legend(loc='upper right', bbox_to_anchor=(1.3, 1.1))
     st.pyplot(fig_radar)
+
 
 # ─── Genre Evolution Timeline ───
 st.header("🎼 Genre Evolution Over Time")
@@ -774,55 +782,3 @@ else:
     else:
         st.info("No valid mood data found in the playlist.")
 
-# 📊 Audio Feature Radar Battle
-st.header("📊 Audio Feature Radar Battle")
-
-# Features to compare (excluding Tempo)
-features = ['Energy', 'Valence', 'Danceability', 'Acousticness',
-            'Instrumentalness', 'Liveness', 'Speechiness', 'Loudness']
-
-# Playlist selectors
-available_playlists = df['Playlist'].unique().tolist()
-playlist1 = st.selectbox("Select Playlist 1", available_playlists, key="radar1")
-playlist2 = st.selectbox("Select Playlist 2", available_playlists, key="radar2")
-
-# Function to compute averages
-def get_avg_features(df, playlist, features):
-    subset = df[df['Playlist'] == playlist]
-    return [subset[f].dropna().mean() if f in subset.columns else 0 for f in features]
-
-# Get feature averages
-avg1 = get_avg_features(df, playlist1, features)
-avg2 = get_avg_features(df, playlist2, features)
-
-# Prepare radar data
-labels = features + [features[0]]
-values1 = avg1 + [avg1[0]]
-values2 = avg2 + [avg2[0]]
-angles = np.linspace(0, 2 * np.pi, len(labels), endpoint=False).tolist()
-angles += angles[:1]
-
-# Radar plot
-fig, ax = plt.subplots(figsize=(6, 6), subplot_kw=dict(polar=True))
-ax.plot(angles, values1, label=playlist1, color="orange")
-ax.fill(angles, values1, color="orange", alpha=0.25)
-ax.plot(angles, values2, label=playlist2, color="teal")
-ax.fill(angles, values2, color="teal", alpha=0.25)
-ax.set_xticks(angles[:-1])
-ax.set_xticklabels(features)
-ax.set_yticklabels([])
-ax.set_title("Audio Feature Radar Comparison")
-ax.legend(loc='upper right', bbox_to_anchor=(1.3, 1.1))
-
-st.pyplot(fig)
-
-# 🏆 Feature-by-feature winner
-st.subheader("🏆 Category Winners")
-for i, f in enumerate(features):
-    v1, v2 = avg1[i], avg2[i]
-    if v1 > v2:
-        st.markdown(f"**{f}** → 🏆 {playlist1}")
-    elif v2 > v1:
-        st.markdown(f"**{f}** → 🏆 {playlist2}")
-    else:
-        st.markdown(f"**{f}** → 🤝 Tie")
