@@ -783,3 +783,59 @@ else:
     else:
         st.info("No valid mood data found in the playlist.")
 
+# 🎛 Audio Feature Radar Battle
+st.header("🎛 Playlist Radar Battle")
+
+features = ["Energy", "Valence", "Danceability", "Acousticness", "Instrumentalness", "Liveness", "Tempo"]
+
+if "Playlist" in df.columns and all(col in df.columns for col in features):
+    playlists = df["Playlist"].dropna().unique()
+    if len(playlists) < 2:
+        st.info("Upload at least 2 playlists to compare.")
+    else:
+        col1, col2 = st.columns(2)
+        with col1:
+            p1 = st.selectbox("Choose Playlist 1", playlists, key="radar1")
+        with col2:
+            p2 = st.selectbox("Choose Playlist 2", [p for p in playlists if p != p1], key="radar2")
+
+        df1 = df[df["Playlist"] == p1]
+        df2 = df[df["Playlist"] == p2]
+
+        avg1 = df1[features].mean()
+        avg2 = df2[features].mean()
+
+        import numpy as np
+        import matplotlib.pyplot as plt
+
+        labels = features
+        angles = np.linspace(0, 2 * np.pi, len(labels), endpoint=False).tolist()
+        angles += angles[:1]
+
+        stats1 = avg1.tolist()
+        stats2 = avg2.tolist()
+        stats1 += stats1[:1]
+        stats2 += stats2[:1]
+
+        fig, ax = plt.subplots(figsize=(6, 6), subplot_kw=dict(polar=True))
+        ax.plot(angles, stats1, label=p1, linewidth=2)
+        ax.fill(angles, stats1, alpha=0.25)
+        ax.plot(angles, stats2, label=p2, linewidth=2)
+        ax.fill(angles, stats2, alpha=0.25)
+
+        ax.set_xticks(angles[:-1])
+        ax.set_xticklabels(labels)
+        ax.set_title("Audio Feature Comparison")
+        ax.legend(loc="upper right", bbox_to_anchor=(1.1, 1.1))
+
+        st.pyplot(fig)
+
+        # Optional: show winner per metric
+        st.subheader("🏆 Category Winners")
+        for f in features:
+            winner = p1 if avg1[f] > avg2[f] else p2
+            st.markdown(f"**{f}** → {winner}")
+else:
+    st.info("You need at least 2 playlists and full audio feature data.")
+
+
