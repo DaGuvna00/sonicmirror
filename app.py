@@ -599,66 +599,53 @@ if 'ReleaseDate' in df.columns:
 else:
     st.info("Release dates not available for time travel.")
 
-# ─── Festival Lineup Generator ───
-# ─── Stylized Festival Poster (Downloadable) ───
-from PIL import Image, ImageDraw, ImageFont
-import io
+import matplotlib.pyplot as plt
+from PIL import Image
+from io import BytesIO
 
-st.header("🖼 Stylized Festival Poster")
+# ─── Festival Poster Generator ───
+st.header("🎪 Downloadable Festival Poster")
 
-def generate_festival_poster(headliner, main_support, mid_card, openers, title="Your Playlist Festival"):
-    # Create base image
-    img = Image.new("RGB", (1000, 1400), color="#181818")
-    draw = ImageDraw.Draw(img)
-
-    # Load fonts (fallback to default if needed)
-    try:
-        title_font = ImageFont.truetype("DejaVuSans-Bold.ttf", 70)
-        head_font = ImageFont.truetype("DejaVuSans-Bold.ttf", 60)
-        support_font = ImageFont.truetype("DejaVuSans-Bold.ttf", 36)
-        mid_font = ImageFont.truetype("DejaVuSans.ttf", 28)
-        open_font = ImageFont.truetype("DejaVuSans.ttf", 22)
-    except:
-        title_font = head_font = support_font = mid_font = open_font = None
-
-    y = 80
-    draw.text((img.width//2, y), title, font=title_font, fill="white", anchor="mm")
-    y += 120
-    draw.text((img.width//2, y), headliner, font=head_font, fill="white", anchor="mm")
-    y += 100
-    draw.text((img.width//2, y), " • ".join(main_support), font=support_font, fill="#FFD700", anchor="mm")
-    y += 70
-    draw.text((img.width//2, y), " • ".join(mid_card), font=mid_font, fill="#AAAAAA", anchor="mm")
-    y += 50
-    draw.text((img.width//2, y), " • ".join(openers), font=open_font, fill="#888888", anchor="mm")
-
-    return img
-
-# Get artists from your top 20
 if 'Artist' in df.columns:
     from collections import Counter
+
     all_artists = []
     for a in df['Artist'].dropna():
         all_artists.extend([x.strip() for x in str(a).split(',')])
+
     artist_counts = Counter(all_artists)
-    top_artists = [a for a, _ in artist_counts.most_common(20)]
+    top_20 = artist_counts.most_common(20)
+    top_artists = [a for a, _ in top_20]
 
-    if len(top_artists) >= 10:
-        headliner = top_artists[0]
-        main_support = top_artists[1:4]
-        mid_card = top_artists[4:8]
-        openers = top_artists[8:15]
+    # Split into two days
+    midpoint = len(top_artists) // 2
+    day_1 = top_artists[:midpoint]
+    day_2 = top_artists[midpoint:]
 
-        img = generate_festival_poster(headliner, main_support, mid_card, openers)
+    def build_poster(day1, day2):
+        fig, ax = plt.subplots(figsize=(8, 10))
+        ax.set_facecolor("#121212")
+        fig.patch.set_facecolor("#121212")
+        ax.axis('off')
 
-        # Convert to byte stream
-        buf = io.BytesIO()
-        img.save(buf, format="PNG")
-        byte_im = buf.getvalue()
+        def draw_day(title, artists, y_start):
+            ax.text(0.5, y_start, title, fontsize=22, fontweight='bold', ha='center', color='white')
+            ax.text(0.5, y_start - 0.05, artists[0], fontsize=28, fontweight='heavy', ha='center', color='gold')
+            ax.text(0.5, y_start - 0.10, ' • '.join(artists[1:4]), fontsize=18, ha='center', color='white')
+            ax.text(0.5, y_start - 0.15, ' • '.join(artists[4:8]), fontsize=14, ha='center', color='lightgray')
+            ax.text(0.5, y_start - 0.20, ' • '.join(artists[8:]), fontsize=10, ha='center', color='gray')
 
-        st.image(img, caption="Your Festival Poster", use_column_width=True)
-        st.download_button("📥 Download Poster", data=byte_im, file_name="festival_poster.png", mime="image/png")
-    else:
-        st.info("Need at least 10 artists to generate poster.")
+        ax.text(0.5, 0.95, "SONICMIRROR FESTIVAL", fontsize=26, fontweight='bold', ha='center', color='cyan')
+        draw_day("DAY 1", day1, 0.85)
+        draw_day("DAY 2", day2, 0.55)
+
+        buf = BytesIO()
+        plt.savefig(buf, format='png', bbox_inches='tight', facecolor=fig.get_facecolor())
+        buf.seek(0)
+        return buf
+
+    poster_buf = build_poster(day_1, day_2)
+    st.image(poster_buf, caption="Your Festival Lineup", use_column_width=True)
+    st.download_button("📥 Download Poster", poster_buf, file_name="sonicmirror_festival.png", mime="image/png")
 else:
-    st.info("No artist data available for poster.")
+    st.info("Artist data missing — can't build your lineup.")
