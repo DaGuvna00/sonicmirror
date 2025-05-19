@@ -55,12 +55,13 @@ selected = st.sidebar.multiselect("Choose playlists to include", playlist_names,
 features = ['Energy','Valence','Danceability','Acousticness','Instrumentalness','Liveness','Speechiness','Tempo','Loudness']
 selected_feats = st.sidebar.multiselect("Select audio features", features, default=features)
 
-# ─── Date Parsing & Lag Calculation in Years ───
+# ─── Date Parsing & Lag Calculation ───
+# Convert to UTC then drop timezone so both columns align
 data['AddedAt'] = pd.to_datetime(data['AddedAt'], errors='coerce', utc=True).dt.tz_convert(None)
 data['ReleaseDate'] = pd.to_datetime(data['ReleaseDate'], errors='coerce', utc=True).dt.tz_convert(None)
+# Compute discovery lag in days
+data['LagDays'] = (data['AddedAt'] - data['ReleaseDate']).dt.days
 
-# Calculate discovery lag in years, rounded to 1 decimal
-data['LagYears'] = ((data['AddedAt'] - data['ReleaseDate']).dt.days / 365.25).round(1)
 
 # ─── Filter & Prepare Dashboard Data ───
 df = data[data['Playlist'].isin(selected)].copy()
