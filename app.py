@@ -638,6 +638,13 @@ if 'Artist' in df.columns:
     day_1 = top_artists[:midpoint]
     day_2 = top_artists[midpoint:]
 
+    long_artists = artists[8:]
+max_per_line = 3 if selected_theme == "Glitch City" else 4
+lines = [' • '.join(long_artists[i:i+max_per_line]) for i in range(0, len(long_artists), max_per_line)]
+for idx, line in enumerate(lines):
+    ax.text(0.5, y_start - 0.22 - idx * 0.035, line, fontsize=12, ha='center', color=text_color, zorder=2, fontproperties=custom_font)
+
+
     def build_poster(day1, day2):
         text_color = 'white'
         if selected_theme in ['Desert Dusk', 'Glitch City']:
