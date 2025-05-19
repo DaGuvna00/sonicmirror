@@ -599,7 +599,6 @@ if 'ReleaseDate' in df.columns:
 else:
     st.info("Release dates not available for time travel.")
 
-
 # ─── Festival Poster Generator ───
 import matplotlib.pyplot as plt
 from PIL import Image
@@ -617,8 +616,8 @@ if 'Artist' in df.columns:
         all_artists.extend([x.strip() for x in str(a).split(',')])
 
     artist_counts = Counter(all_artists)
-    top_30 = artist_counts.most_common(30)
-    top_artists = [a for a, _ in top_30]
+    top_40 = artist_counts.most_common(40)  # increase from 20 to 40
+    top_artists = [a for a, _ in top_40]
 
     # Split into two days
     midpoint = len(top_artists) // 2
@@ -639,16 +638,16 @@ if 'Artist' in df.columns:
             fig.patch.set_facecolor("#121212")
 
         def draw_day(title, artists, y_start):
-            ax.text(0.5, y_start, title, fontsize=22, fontweight='bold', ha='center', color='white', zorder=1)
-            ax.text(0.5, y_start - 0.05, artists[0], fontsize=28, fontweight='heavy', ha='center', color='gold', zorder=1)
-            ax.text(0.5, y_start - 0.10, ' • '.join(artists[1:4]), fontsize=18, ha='center', color='white', zorder=1)
-            ax.text(0.5, y_start - 0.15, ' • '.join(artists[4:8]), fontsize=14, ha='center', color='lightgray', zorder=1)
-            ax.text(0.5, y_start - 0.20, ' • '.join(artists[8:]), fontsize=10, ha='center', color='gray', zorder=1)
+            ax.text(0.5, y_start, title, fontsize=24, fontweight='bold', ha='center', color='white', zorder=1, family='monospace')
+            ax.text(0.5, y_start - 0.05, artists[0], fontsize=30, fontweight='bold', ha='center', color='gold', zorder=1, family='monospace')
+            ax.text(0.5, y_start - 0.10, ' • '.join(artists[1:4]), fontsize=20, ha='center', color='white', zorder=1, family='monospace')
+            ax.text(0.5, y_start - 0.15, ' • '.join(artists[4:8]), fontsize=16, ha='center', color='lightgray', zorder=1, family='monospace')
+            ax.text(0.5, y_start - 0.22, ' • '.join(artists[8:]), fontsize=10, ha='center', color='gray', zorder=1, family='monospace')
 
         # Overlay text only
-        ax.text(0.5, 0.95, "SONICMIRROR FESTIVAL", fontsize=26, fontweight='bold', ha='center', color='white', zorder=1)
-        draw_day("DAY 1", day1, 0.85)
-        draw_day("DAY 2", day2, 0.55)
+        ax.text(0.5, 0.95, "SONICMIRROR FESTIVAL", fontsize=28, fontweight='bold', ha='center', color='white', zorder=1, family='monospace')
+        draw_day("DAY 1", day_1, 0.85)
+        draw_day("DAY 2", day_2, 0.50)
 
         buf = BytesIO()
         plt.savefig(buf, format='png', bbox_inches='tight')
