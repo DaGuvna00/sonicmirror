@@ -636,7 +636,7 @@ if 'Artist' in df.columns:
     top_40 = artist_counts.most_common(40)
     top_artists = [a for a, _ in top_40]
 
-    midpoint = len(top_artists) // 2
+    midpoint = len(top_artists) // 3
     day_1 = top_artists[:midpoint]
     day_2 = top_artists[midpoint:]
 
