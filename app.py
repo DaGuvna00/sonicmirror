@@ -362,114 +362,30 @@ if radar_choices:
     ax_radar.legend(loc='upper right', bbox_to_anchor=(1.3, 1.1))
     st.pyplot(fig_radar)
 
-# ─── AI-Powered Summaries & Recommendations ───
-st.header("🤖 AI-Powered Playlist Synopsis & Recommendations")
-openai_key = st.secrets.get("OPENAI_API_KEY")
-if not openai_key:
-    st.warning("🔑 Add your OPENAI_API_KEY to Streamlit secrets to enable AI-powered summaries and recommendations.")
-else:
-    summary_choices = st.multiselect(
-        "Select playlists for AI synopsis", df['Playlist'].unique().tolist(), default=selected[:2]
+# ─── Genre Evolution Timeline ───
+st.header("🎼 Genre Evolution Over Time")
+
+if 'Genres' in df.columns and 'AddedAt' in df.columns:
+    genre_timeline = df.dropna(subset=['Genres', 'AddedAt']).copy()
+    genre_timeline['AddedMonth'] = genre_timeline['AddedAt'].dt.to_period("M").dt.to_timestamp()
+
+    genre_counts = (
+        genre_timeline.groupby(['AddedMonth', 'Genres'])
+        .size()
+        .reset_index(name='Count')
     )
-    if st.button("📝 Generate AI Synopsis"):
-        import openai
-        openai.api_key = openai_key
-        # Build prompt using average features of selected playlists
-        feature_data = avgs.loc[summary_choices].to_dict()
-        prompt = (
-            f"You are a music recommendation assistant. "
-            f"Write a concise summary of the mood and audio profile for these Spotify playlists: {', '.join(summary_choices)}. "
-            f"The average audio features are: {feature_data}. "
-            f"Then recommend 5 new songs (title and artist) that would fit well with these playlists."        )
-        with st.spinner("Generating AI summary and recommendations…"):
-            response = openai.ChatCompletion.create(
-                model="gpt-4",
-                messages=[
-                    {"role": "system", "content": "You are a helpful assistant specialized in music playlist analysis."},
-                    {"role": "user", "content": prompt}
-                ],
-                max_tokens=500,
-                temperature=0.7
-            )
-            ai_output = response.choices[0].message.content
-        st.subheader("📝 AI Synopsis & Recommendations")
-        st.write(ai_output)
 
-# ─── Lyrics Sentiment Analysis (Optional, Button-Triggered) ───
-st.header("🎭 Lyrics Sentiment Analysis (Optional)")
-st.info("Lyrics sentiment can take a while—click below to run it after core analytics load.")
+    pivot = genre_counts.pivot(index='AddedMonth', columns='Genres', values='Count').fillna(0)
 
-if st.button("💭 Run Lyrics Sentiment Analysis"):
-    genius_token = st.secrets.get("GENIUS_TOKEN")
-    if not genius_token:
-        st.warning("🔑 Add your GENIUS_TOKEN to Streamlit secrets to enable sentiment analysis.")
-    else:
-        import lyricsgenius
-        from textblob import TextBlob, download_corpora
-        import re
+    # Limit to top 5 genres for readability
+    top_genres = pivot.sum().sort_values(ascending=False).head(5).index.tolist()
 
-        # Ensure TextBlob has its corpora
-        download_corpora.download_all()
+    fig, ax = plt.subplots(figsize=(10, 4))
+    pivot[top_genres].plot.area(ax=ax)
+    ax.set_ylabel("# of Tracks")
+    ax.set_title("Top 5 Genres Added Over Time")
+    ax.legend(title="Genre")
+    st.pyplot(fig)
 
-        genius = lyricsgenius.Genius(
-            genius_token,
-            skip_non_songs=True,
-            excluded_terms=["(Remix)"]
-        )
-        tracks_unique = (
-            df[['Track','Artist','Playlist']]
-            .drop_duplicates()
-            .to_dict(orient='records')
-        )
-        total = len(tracks_unique)
-        bar = st.progress(0)
-        sentiment_data = []
-
-        with st.spinner("Fetching lyrics and computing sentiment…"):
-            for idx, entry in enumerate(tracks_unique):
-                # Clean up title for better matching
-                title = re.sub(r"\s*-\s*.*remix$", "", str(entry.get('Track') or ""), flags=re.IGNORECASE)
-                title = re.sub(r"\(.*?\)", "", title).strip()
-                # Robust artist extraction
-                raw_artist = entry.get('Artist')
-                if isinstance(raw_artist, str):
-                    artist_parts = raw_artist.split(',')
-                elif isinstance(raw_artist, (list, tuple)):
-                    artist_parts = raw_artist
-                else:
-                    artist_parts = [str(raw_artist)] if raw_artist is not None else []
-                artist = artist_parts[0] if artist_parts else ""
-
-                try:
-                    song = genius.search_song(title, artist)
-                    lyrics = song.lyrics if song and hasattr(song, 'lyrics') else ""
-                    polarity = TextBlob(lyrics).sentiment.polarity if lyrics else None
-                except Exception:
-                    polarity = None
-
-                sentiment_data.append({
-                    'Playlist': entry['Playlist'],
-                    'Track': entry.get('Track'),
-                    'Artist': artist,
-                    'Polarity': polarity
-                })
-                bar.progress((idx + 1) / total)
-
-        sent_df = pd.DataFrame(sentiment_data).dropna(subset=['Polarity'])
-        if not sent_df.empty:
-            # Average polarity
-            avg_sent = sent_df.groupby('Playlist')['Polarity'].mean().round(3)
-            fig, ax = plt.subplots()
-            avg_sent.plot(kind='bar', ax=ax)
-            ax.set_ylabel('Polarity')
-            ax.set_title('Average Lyrics Sentiment')
-            st.pyplot(fig)
-
-            # Happy vs Sad lists
-            st.subheader("😀 Top Happy Tracks")
-            st.dataframe(sent_df.nlargest(10, 'Polarity')[['Playlist','Track','Artist','Polarity']])
-            st.subheader("😢 Top Sad Tracks")
-            st.dataframe(sent_df.nsmallest(10, 'Polarity')[['Playlist','Track','Artist','Polarity']])
-        else:
-            st.warning("⚠️ No sentiment polarity computed yet—please click the button again if it’s still running.")
-# ─── End of Dashboard ───
+else:
+    st.info("No genre or added-at date info available to show genre evolution.")
