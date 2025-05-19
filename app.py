@@ -659,6 +659,9 @@ for idx, line in enumerate(lines):
             ax.set_facecolor("#121212")
             fig.patch.set_facecolor("#121212")
 
+        ax.add_patch(plt.Rectangle((0, 0.42), 1, 0.52, color='black', alpha=0.3, zorder=1))
+
+
         def draw_day(title, artists, y_start):
             ax.text(0.5, y_start, title, fontsize=24, fontweight='bold', ha='center', color=text_color, zorder=1, fontproperties=custom_font)
             ax.text(0.5, y_start - 0.05, artists[0], fontsize=34, fontweight='bold', ha='center', color='gold', zorder=1, fontproperties=custom_font)
