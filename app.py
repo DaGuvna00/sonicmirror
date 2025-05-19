@@ -598,7 +598,8 @@ if 'ReleaseDate' in df.columns:
 
 else:
     st.info("Release dates not available for time travel.")
-    import matplotlib.pyplot as plt
+
+import matplotlib.pyplot as plt
 from PIL import Image
 from io import BytesIO
 from matplotlib import font_manager as fm
@@ -638,6 +639,9 @@ if 'Artist' in df.columns:
     day_2 = top_artists[midpoint:]
 
     def build_poster(day1, day2):
+        text_color = 'white'
+        if selected_theme in ['Desert Dusk', 'Glitch City']:
+            text_color = 'black'
         fig, ax = plt.subplots(figsize=(10, 16))
         ax.axis('off')
 
@@ -649,15 +653,15 @@ if 'Artist' in df.columns:
             fig.patch.set_facecolor("#121212")
 
         def draw_day(title, artists, y_start):
-            ax.text(0.5, y_start, title, fontsize=24, fontweight='bold', ha='center', color='white', zorder=1, fontproperties=custom_font)
+            ax.text(0.5, y_start, title, fontsize=24, fontweight='bold', ha='center', color=text_color, zorder=1, fontproperties=custom_font)
             ax.text(0.5, y_start - 0.05, artists[0], fontsize=34, fontweight='bold', ha='center', color='gold', zorder=1, fontproperties=custom_font)
-            ax.text(0.5, y_start - 0.10, ' • '.join(artists[1:4]), fontsize=18, ha='center', color='white', zorder=1, fontproperties=custom_font)
+            ax.text(0.5, y_start - 0.10, ' • '.join(artists[1:4]), fontsize=18, ha='center', color=text_color, zorder=1, fontproperties=custom_font)
             ax.text(0.5, y_start - 0.15, ' • '.join(artists[4:8]), fontsize=14, ha='center', color='lightgray', zorder=1, fontproperties=custom_font)
-            ax.text(0.5, y_start - 0.22, '\n'.join([' • '.join(artists[i:i+6]) for i in range(8, len(artists), 6)]), fontsize=12, ha='center', color='lightgray', zorder=1, fontproperties=custom_font)
+            ax.text(0.5, y_start - 0.22, '\n'.join([' • '.join(artists[i:i+6]) for i in range(8, len(artists), 6)]), fontsize=12, ha='center', color=text_color, zorder=1, fontproperties=custom_font)
 
         for dx, dy in [(-0.002, -0.002), (0.002, -0.002), (-0.002, 0.002), (0.002, 0.002)]:
             ax.text(0.5 + dx, 0.96 + dy, "SONICMIRROR FESTIVAL", fontsize=28, fontweight='bold', ha='center', color='black', zorder=1, fontproperties=custom_font)
-            ax.text(0.5, 0.96, "SONICMIRROR FESTIVAL", fontsize=28, fontweight='bold', ha='center', color='white', zorder=1, fontproperties=custom_font)
+        ax.text(0.5, 0.96, "SONICMIRROR FESTIVAL", fontsize=28, fontweight='bold', ha='center', color=text_color, zorder=1, fontproperties=custom_font)
 
         draw_day("DAY 1", day1, 0.88)
         draw_day("DAY 2", day2, 0.48)
@@ -672,3 +676,4 @@ if 'Artist' in df.columns:
     st.download_button("📥 Download Poster", poster_buf, file_name="sonicmirror_festival.png", mime="image/png")
 else:
     st.info("Artist data missing — can't build your lineup.")
+
