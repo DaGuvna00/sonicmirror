@@ -230,63 +230,38 @@ ax_genre.set_xlabel('Count')
 ax_genre.set_title('Top Genres in Your Playlists')
 st.pyplot(fig_genre)
 
-# ─── Playlist Similarity Matrix ───
-st.header("🗂️ Playlist Similarity")
+# ─── Playlist Audio Feature Clustering ───
+st.header("🧭 Playlist Landscape Map (PCA)")
 
-from numpy.linalg import norm
-from scipy.spatial.distance import pdist, squareform
-from scipy.cluster.hierarchy import linkage, leaves_list
+from sklearn.decomposition import PCA
 
-# Remove 'tempo' to avoid scale skew
-features_for_similarity = [f for f in selected_feats if f.lower() != "tempo"]
+# Only run if there's more than 1 playlist
+if len(avgs) > 1:
+    features_for_pca = selected_feats.copy()
+    if "Tempo" in features_for_pca:
+        features_for_pca.remove("Tempo")  # optional to drop tempo if it skews scale
 
-# Build normalized matrix of playlist audio feature averages
-X = avgs[features_for_similarity].values
-labels = avgs.index.tolist()
+    feature_matrix = avgs[features_for_pca].values
 
-# Normalize vectors (row-wise)
-norms = norm(X, axis=1, keepdims=True)
-X_norm = X / norms
+    # PCA to 2 components
+    pca = PCA(n_components=2)
+    pca_coords = pca.fit_transform(feature_matrix)
 
-# Cosine similarity matrix
-sim_matrix = np.dot(X_norm, X_norm.T)
-sim_df = pd.DataFrame(sim_matrix, index=labels, columns=labels)
+    # Plot
+    fig_pca, ax_pca = plt.subplots()
+    ax_pca.scatter(pca_coords[:, 0], pca_coords[:, 1], color='mediumslateblue')
 
-# Sort playlists by similarity using hierarchical clustering
-order = leaves_list(linkage(X_norm, method='average'))
-sorted_labels = [labels[i] for i in order]
-sim_df_sorted = sim_df.loc[sorted_labels, sorted_labels]
+    for i, name in enumerate(avgs.index):
+        ax_pca.text(pca_coords[i, 0], pca_coords[i, 1], name, fontsize=9, ha='center', va='center')
 
-# Display similarity table
-st.subheader("Cosine Similarity Table (Sorted)")
-st.dataframe(sim_df_sorted.round(3))
+    ax_pca.set_title("🎯 Playlist Clustering via Audio Features")
+    ax_pca.set_xlabel("PCA Component 1")
+    ax_pca.set_ylabel("PCA Component 2")
 
-# Show highly similar pairs
-st.subheader("🔎 Top Similar Playlist Pairs (> 0.85)")
-pairs = []
-for i in range(len(labels)):
-    for j in range(i+1, len(labels)):
-        score = sim_df.iloc[i, j]
-        if score > 0.85 and score < 0.999:
-            pairs.append((labels[i], labels[j], score))
-if pairs:
-    sorted_pairs = sorted(pairs, key=lambda x: -x[2])
-    for a, b, score in sorted_pairs:
-        st.markdown(f"- **{a}** & **{b}** → {score:.2f}")
+    st.pyplot(fig_pca)
 else:
-    st.write("No highly similar playlist pairs found.")
+    st.info("At least 2 playlists are needed to compute PCA positioning.")
 
-# Heatmap
-st.subheader("🎛 Similarity Heatmap")
-fig_sim, ax_sim = plt.subplots()
-cax = ax_sim.matshow(sim_df_sorted, vmin=0, vmax=1, cmap='plasma')
-fig_sim.colorbar(cax)
-ax_sim.set_xticks(range(len(sorted_labels)))
-ax_sim.set_yticks(range(len(sorted_labels)))
-ax_sim.set_xticklabels(sorted_labels, rotation=90)
-ax_sim.set_yticklabels(sorted_labels)
-ax_sim.set_title("Playlist Cosine Similarity", pad=20)
-st.pyplot(fig_sim)
 
 
 # ─── Track Popularity & "Hidden Gems" ───
