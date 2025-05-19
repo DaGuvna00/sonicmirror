@@ -663,5 +663,5 @@ if 'Artist' in df.columns:
     buf = BytesIO()
     plt.savefig(buf, format='png', bbox_inches='tight')
     buf.seek(0)
-    return buf
+        return buf
 
