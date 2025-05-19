@@ -232,30 +232,62 @@ st.pyplot(fig_genre)
 
 # ─── Playlist Similarity Matrix ───
 st.header("🗂️ Playlist Similarity")
-# Compute cosine similarity between playlists based on selected_feats
+
 from numpy.linalg import norm
-# Build feature matrix
-X = avgs[selected_feats].values
+from scipy.spatial.distance import pdist, squareform
+from scipy.cluster.hierarchy import linkage, leaves_list
+
+# Remove 'tempo' to avoid scale skew
+features_for_similarity = [f for f in selected_feats if f.lower() != "tempo"]
+
+# Build normalized matrix of playlist audio feature averages
+X = avgs[features_for_similarity].values
 labels = avgs.index.tolist()
-# Normalize rows
+
+# Normalize vectors (row-wise)
 norms = norm(X, axis=1, keepdims=True)
 X_norm = X / norms
+
 # Cosine similarity matrix
 sim_matrix = np.dot(X_norm, X_norm.T)
 sim_df = pd.DataFrame(sim_matrix, index=labels, columns=labels)
+
+# Sort playlists by similarity using hierarchical clustering
+order = leaves_list(linkage(X_norm, method='average'))
+sorted_labels = [labels[i] for i in order]
+sim_df_sorted = sim_df.loc[sorted_labels, sorted_labels]
+
 # Display similarity table
-st.subheader("Cosine Similarity Table")
-st.dataframe(sim_df.round(3))
+st.subheader("Cosine Similarity Table (Sorted)")
+st.dataframe(sim_df_sorted.round(3))
+
+# Show highly similar pairs
+st.subheader("🔎 Top Similar Playlist Pairs (> 0.85)")
+pairs = []
+for i in range(len(labels)):
+    for j in range(i+1, len(labels)):
+        score = sim_df.iloc[i, j]
+        if score > 0.85 and score < 0.999:
+            pairs.append((labels[i], labels[j], score))
+if pairs:
+    sorted_pairs = sorted(pairs, key=lambda x: -x[2])
+    for a, b, score in sorted_pairs:
+        st.markdown(f"- **{a}** & **{b}** → {score:.2f}")
+else:
+    st.write("No highly similar playlist pairs found.")
+
 # Heatmap
+st.subheader("🎛 Similarity Heatmap")
 fig_sim, ax_sim = plt.subplots()
-cax = ax_sim.matshow(sim_df, vmin=0, vmax=1)
+cax = ax_sim.matshow(sim_df_sorted, vmin=0, vmax=1, cmap='plasma')
 fig_sim.colorbar(cax)
-ax_sim.set_xticks(range(len(labels)))
-ax_sim.set_yticks(range(len(labels)))
-ax_sim.set_xticklabels(labels, rotation=90)
-ax_sim.set_yticklabels(labels)
-ax_sim.set_title('Playlist Cosine Similarity')
+ax_sim.set_xticks(range(len(sorted_labels)))
+ax_sim.set_yticks(range(len(sorted_labels)))
+ax_sim.set_xticklabels(sorted_labels, rotation=90)
+ax_sim.set_yticklabels(sorted_labels)
+ax_sim.set_title("Playlist Cosine Similarity", pad=20)
 st.pyplot(fig_sim)
+
 
 # ─── Track Popularity & "Hidden Gems" ───
 st.header("⭐ Track Popularity & Hidden Gems")
