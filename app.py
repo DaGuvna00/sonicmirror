@@ -569,3 +569,34 @@ if 'Popularity' in df.columns:
     st.caption("Lower = rarer. Spotify popularity score is based on streams and trending status.")
 else:
     st.info("Popularity data is missing. Can't compute rarity.")
+
+# ─── Festival Lineup Generator ───
+st.header("🎪 Your Playlist Festival Lineup")
+
+if 'Artist' in df.columns:
+    from collections import Counter
+    # Count artist appearances (split out multi-artist tracks)
+    all_artists = []
+    for a in df['Artist'].dropna():
+        all_artists.extend([x.strip() for x in str(a).split(',')])
+    artist_counts = Counter(all_artists)
+
+    top_20 = artist_counts.most_common(20)
+    top_artists = [a for a, _ in top_20]
+
+    # Split into two "days"
+    day_1 = top_artists[::2]
+    day_2 = top_artists[1::2]
+
+    def render_day(day_name, artists):
+        st.subheader(f"🎤 {day_name}")
+        st.markdown(f"""
+        <div style='text-align: center; font-size: 28px; font-weight: bold;'>{artists[0]}</div>
+        <div style='text-align: center; font-size: 20px;'>{' • '.join(artists[1:4])}</div>
+        <div style='text-align: center; font-size: 14px; color: gray;'>{' • '.join(artists[4:])}</div>
+        """, unsafe_allow_html=True)
+
+    render_day("Day 1", day_1)
+    render_day("Day 2", day_2)
+else:
+    st.info("Artist data missing — can't build your lineup.")
