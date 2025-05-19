@@ -570,25 +570,31 @@ if 'Popularity' in df.columns:
 else:
     st.info("Popularity data is missing. Can't compute rarity.")
 
-# ─── Festival Lineup Generator ───
-st.header("🎪 Your Playlist Festival Lineup")
+# ─── Time Travel Playlist by Decade ───
+st.header("📻 Time Travel by Decade")
 
-def render_day(day_name, artists):
-    if len(artists) < 10:
-        st.warning("Need at least 10 artists for proper layout.")
-        return
+if 'ReleaseDate' in df.columns:
+    decades_df = df.dropna(subset=['ReleaseDate']).copy()
+    decades_df['Year'] = pd.to_datetime(decades_df['ReleaseDate'], errors='coerce').dt.year
+    decades_df['Decade'] = (decades_df['Year'] // 10 * 10).astype('Int64')
 
-    headliner = artists[0]
-    main_support = artists[1:4]
-    mid_card = artists[4:8]
-    openers = artists[8:]
+    decade_counts = (
+        decades_df['Decade']
+        .value_counts()
+        .sort_index()
+    )
 
-    st.subheader(f"🎤 {day_name}")
-    st.markdown(f"""
-    <div style="text-align: center; margin-bottom: 1em;">
-        <div style="font-size: 48px; font-weight: 900; margin: 0;">{headliner}</div>
-        <div style="font-size: 28px; font-weight: 700; margin: 0.2em 0;">{' • '.join(main_support)}</div>
-        <div style="font-size: 18px; font-weight: 500; color: #888; margin: 0.5em 0;">{' • '.join(mid_card)}</div>
-        <div style="font-size: 14px; color: #aaa;">{' • '.join(openers)}</div>
-    </div>
-    """, unsafe_allow_html=True)
+    fig, ax = plt.subplots()
+    decade_counts.plot(kind='bar', ax=ax)
+    ax.set_xlabel("Decade")
+    ax.set_ylabel("Track Count")
+    ax.set_title("Your Tracks by Decade of Release")
+    st.pyplot(fig)
+
+    st.subheader("🎵 Top Track from Each Decade")
+    for decade in decade_counts.index:
+        track = decades_df[decades_df['Decade'] == decade].sample(1).iloc[0]
+        st.markdown(f"**{decade}s** → *{track['Track']}* by *{track['Artist']}*")
+
+else:
+    st.info("Release dates not available for time travel.")
