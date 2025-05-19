@@ -703,58 +703,83 @@ if 'Artist' in df.columns:
 else:
     st.info("Artist data missing — can't build your lineup.")
 
-# --- Vibe Moodboard Analysis & Display ---
+
+# --- Vibe Moodboard from Actual Audio Features ---
 st.header("🎭 Vibe Moodboard")
 
-# Sample mapping logic (update this based on your own audio feature logic)
-# Replace with your actual mood assignment logic
-mood_counts = {
-    "😢 Feels Trip": 47,
-    "🔥 Hype Mode": 28,
-    "🎉 Party Time": 11,
-    "🧠 Introspective": 7,
-    "😎 Chill Zone": 5,
-    "🌌 Dreamwave": 2
-}
-
-total = sum(mood_counts.values())
-sorted_moods = sorted(mood_counts.items(), key=lambda x: x[1], reverse=True)
-
-# Mood styles
-mood_styles = {
-    "🔥 Hype Mode": ("#ff5733", "🔥"),
-    "😎 Chill Zone": ("#5dade2", "😎"),
-    "😢 Feels Trip": ("#8e44ad", "😢"),
-    "🎉 Party Time": ("#f39c12", "🎉"),
-    "🧠 Introspective": ("#34495e", "🧠"),
-    "🌌 Dreamwave": ("#1abc9c", "🌌")
-}
-
-if total == 0:
-    st.info("Not enough data to generate moodboard.")
+# Make sure required features exist
+required_cols = ["Valence", "Energy", "Danceability", "Acousticness", "Speechiness", "Instrumentalness"]
+if not all(col in df.columns for col in required_cols):
+    st.warning("Not enough audio features available to build the Vibe Moodboard.")
 else:
-    # Mood summary sentence
-    dominant = sorted_moods[0][0] if sorted_moods else ""
-    secondary = sorted_moods[1][0] if len(sorted_moods) > 1 else ""
-    st.markdown(f"""
-    <div style="font-size: 1.2em; margin-bottom: 1em;">
-        🎶 This playlist leans <strong>{dominant[2:]}</strong> — mostly {dominant} with a touch of {secondary}
-    </div>
-    """, unsafe_allow_html=True)
+    def classify_mood(row):
+        valence = row["Valence"]
+        energy = row["Energy"]
+        dance = row["Danceability"]
+        acoustic = row["Acousticness"]
+        speech = row["Speechiness"]
+        instr = row["Instrumentalness"]
 
-    # Mood breakdown bars
-    for mood, count in sorted_moods:
-        percent = int((count / total) * 100)
-        color, emoji = mood_styles.get(mood, ("#888", "🎧"))
+        if valence < 0.3 and energy < 0.4:
+            return "😢 Feels Trip"
+        elif energy > 0.7 and valence > 0.6 and dance > 0.7:
+            return "🔥 Hype Mode"
+        elif valence > 0.5 and dance > 0.6:
+            return "🎉 Party Time"
+        elif valence < 0.4 and dance < 0.4 and speech < 0.5:
+            return "🧠 Introspective"
+        elif energy < 0.4 and acoustic > 0.6:
+            return "😎 Chill Zone"
+        elif instr > 0.6 and speech < 0.3 and energy < 0.6:
+            return "🌌 Dreamwave"
+        else:
+            return "🧠 Introspective"  # fallback
 
+    # Apply mood classifier to each song
+    df["Mood"] = df.apply(classify_mood, axis=1)
+
+    # Tally the moods
+    mood_counts = df["Mood"].value_counts().to_dict()
+    total = sum(mood_counts.values())
+
+    # Sort by frequency
+    sorted_moods = sorted(mood_counts.items(), key=lambda x: x[1], reverse=True)
+
+    # Mood styles
+    mood_styles = {
+        "🔥 Hype Mode": ("#ff5733", "🔥"),
+        "😎 Chill Zone": ("#5dade2", "😎"),
+        "😢 Feels Trip": ("#8e44ad", "😢"),
+        "🎉 Party Time": ("#f39c12", "🎉"),
+        "🧠 Introspective": ("#34495e", "🧠"),
+        "🌌 Dreamwave": ("#1abc9c", "🌌")
+    }
+
+    # Mood summary
+    if total > 0:
+        dominant = sorted_moods[0][0]
+        secondary = sorted_moods[1][0] if len(sorted_moods) > 1 else ""
         st.markdown(f"""
-        <div style="display: flex; align-items: center; margin: 0.3em 0;">
-            <div style="width: 3em; font-size: 1.5em;">{emoji}</div>
-            <div style="flex: 1; background: #eee; border-radius: 10px; overflow: hidden;">
-                <div style="width: {percent}%; background: {color}; padding: 0.3em; color: white; font-weight: bold; text-align: right;">
-                    {percent}%
-                </div>
-            </div>
-            <div style="margin-left: 1em; font-weight: 600;">{mood[2:]}</div>
+        <div style="font-size: 1.2em; margin-bottom: 1em;">
+            🎶 This playlist leans <strong>{dominant[2:]}</strong> — mostly {dominant} with a touch of {secondary}
         </div>
         """, unsafe_allow_html=True)
+
+        # Mood chart bars
+        for mood, count in sorted_moods:
+            percent = int((count / total) * 100)
+            color, emoji = mood_styles.get(mood, ("#888", "🎧"))
+            st.markdown(f"""
+            <div style="display: flex; align-items: center; margin: 0.3em 0;">
+                <div style="width: 3em; font-size: 1.5em;">{emoji}</div>
+                <div style="flex: 1; background: #eee; border-radius: 10px; overflow: hidden;">
+                    <div style="width: {percent}%; background: {color}; padding: 0.3em; color: white; font-weight: bold; text-align: right;">
+                        {percent}%
+                    </div>
+                </div>
+                <div style="margin-left: 1em; font-weight: 600;">{mood[2:]}</div>
+            </div>
+            """, unsafe_allow_html=True)
+    else:
+        st.info("No valid mood data found in the playlist.")
+
