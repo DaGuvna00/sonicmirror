@@ -644,7 +644,7 @@ if 'Artist' in df.columns:
     def build_poster(day1, day2):
         text_color = 'white'
         if selected_theme in ['Desert Dusk', 'Glitch City']:
-            text_color = 'black'
+            text_color = 'yellow'
 
         fig, ax = plt.subplots(figsize=(10, 16))
         ax.axis('off')
