@@ -528,3 +528,22 @@ if 'Artist' in df.columns and 'Popularity' in df.columns:
     st.pyplot(fig)
 else:
     st.info("Artist or popularity data missing.")
+
+# ─── Tempo vs Loudness Heatmap ───
+st.header("📊 Tempo vs Loudness Heatmap")
+
+if 'Tempo' in df.columns and 'Loudness' in df.columns:
+    tempo_loud_df = df.dropna(subset=['Tempo', 'Loudness'])
+
+    fig, ax = plt.subplots()
+    scatter = ax.scatter(
+        tempo_loud_df['Tempo'],
+        tempo_loud_df['Loudness'],
+        alpha=0.5
+    )
+    ax.set_xlabel("Tempo (BPM)")
+    ax.set_ylabel("Loudness (dB)")
+    ax.set_title("How Loud and Fast is Your Music?")
+    st.pyplot(fig)
+else:
+    st.info("Tempo and loudness data not available.")
