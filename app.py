@@ -389,3 +389,27 @@ if 'Genres' in df.columns and 'AddedAt' in df.columns:
 
 else:
     st.info("No genre or added-at date info available to show genre evolution.")
+
+# ─── Emotional Journey Curve ───
+st.header("📈 Emotional Journey Over Time")
+
+if 'Energy' in df.columns and 'Valence' in df.columns and 'AddedAt' in df.columns:
+    mood_df = df.dropna(subset=['Energy', 'Valence', 'AddedAt']).copy()
+    mood_df['AddedDate'] = mood_df['AddedAt'].dt.to_period("M").dt.to_timestamp()
+
+    mood_summary = (
+        mood_df.groupby('AddedDate')[['Energy', 'Valence']]
+        .mean()
+        .reset_index()
+    )
+
+    fig, ax = plt.subplots()
+    ax.plot(mood_summary['AddedDate'], mood_summary['Energy'], label='Energy', marker='o')
+    ax.plot(mood_summary['AddedDate'], mood_summary['Valence'], label='Valence (Happiness)', marker='s')
+    ax.set_title("Your Emotional Music Journey")
+    ax.set_ylabel("Average Value (0–1)")
+    ax.legend()
+    st.pyplot(fig)
+else:
+    st.info("Not enough data to plot emotional journey.")
+
