@@ -663,5 +663,11 @@ if 'Artist' in df.columns:
     buf = BytesIO()
     plt.savefig(buf, format='png', bbox_inches='tight')
     buf.seek(0)
-return buf
+    return buf
+
+    poster_buf = build_poster(day_1, day_2)
+    st.image(poster_buf, caption="Your Festival Lineup", use_container_width=True)
+    st.download_button("📥 Download Poster", poster_buf, file_name="sonicmirror_festival.png", mime="image/png")
+else:
+    st.info("Artist data missing — can't build your lineup.")
 
