@@ -654,7 +654,7 @@ if 'Artist' in df.columns:
             ax.text(0.5, y_start - 0.05, artists[0], fontsize=34, fontweight='bold', ha='center', color='gold', zorder=1, fontproperties=custom_font)
             ax.text(0.5, y_start - 0.10, ' • '.join(artists[1:4]), fontsize=18, ha='center', color='white', zorder=1, fontproperties=custom_font)
             ax.text(0.5, y_start - 0.15, ' • '.join(artists[4:8]), fontsize=14, ha='center', color='lightgray', zorder=1, fontproperties=custom_font)
-            ax.text(0.5, y_start - 0.22, '\n'.join([' • '.join(artists[i:i+6]) for i in range(8, len(artists), 6)]), fontsize=12, ha='center', color='lightgray', zorder=1, family=font_family)
+            ax.text(0.5, y_start - 0.22, '\n'.join([' • '.join(artists[i:i+6]) for i in range(8, len(artists), 6)]), fontsize=12, ha='center', color='lightgray', zorder=1, fontproperties=custom_font)
 
         for dx, dy in [(-0.002, -0.002), (0.002, -0.002), (-0.002, 0.002), (0.002, 0.002)]:
             ax.text(0.5 + dx, 0.96 + dy, "SONICMIRROR FESTIVAL", fontsize=28, fontweight='bold', ha='center', color='black', zorder=1, family=font_family)
