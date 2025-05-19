@@ -673,10 +673,10 @@ if 'Artist' in df.columns:
 
             # Handle overflow nicely
             long_artists = artists[8:]
-            max_per_line = 3 if selected_theme == "Glitch City" else 4
+            max_per_line = 3 if selected_theme == "Glitch City" else 3
             lines = [' • '.join(long_artists[i:i+max_per_line]) for i in range(0, len(long_artists), max_per_line)]
             for idx, line in enumerate(lines):
-                ax.text(0.5, y_start - 0.22 - idx * 0.035, line, fontsize=12, ha='center',
+                ax.text(0.5, y_start - 0.22 - idx * 0.038, line, fontsize=12, ha='center',
                         color=text_color, zorder=2, fontproperties=custom_font)
 
         # Festival title with shadow
