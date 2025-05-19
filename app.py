@@ -598,8 +598,7 @@ if 'ReleaseDate' in df.columns:
 
 else:
     st.info("Release dates not available for time travel.")
-    
-import matplotlib.pyplot as plt
+    import matplotlib.pyplot as plt
 from PIL import Image
 from io import BytesIO
 from matplotlib import font_manager as fm
@@ -658,7 +657,7 @@ if 'Artist' in df.columns:
 
         for dx, dy in [(-0.002, -0.002), (0.002, -0.002), (-0.002, 0.002), (0.002, 0.002)]:
             ax.text(0.5 + dx, 0.96 + dy, "SONICMIRROR FESTIVAL", fontsize=28, fontweight='bold', ha='center', color='black', zorder=1, fontproperties=custom_font)
-        ax.text(0.5, 0.96, "SONICMIRROR FESTIVAL", fontsize=28, fontweight='bold', ha='center', color='white', zorder=1, family=font_family)
+            ax.text(0.5, 0.96, "SONICMIRROR FESTIVAL", fontsize=28, fontweight='bold', ha='center', color='white', zorder=1, fontproperties=custom_font)
 
         draw_day("DAY 1", day1, 0.88)
         draw_day("DAY 2", day2, 0.48)
