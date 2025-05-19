@@ -617,19 +617,21 @@ bg_options = {
 
 selected_theme = st.selectbox("Choose your poster style:", list(bg_options.keys()))
 bg_path, font_path = bg_options[selected_theme]
-custom_font = None
+
+# Load the font
 if os.path.exists(font_path):
     custom_font = fm.FontProperties(fname=font_path)
 else:
     custom_font = fm.FontProperties(family='monospace')
 
+# ─── Poster Logic ───
 if 'Artist' in df.columns:
     from collections import Counter
 
+    # Get top 40 artists
     all_artists = []
     for a in df['Artist'].dropna():
         all_artists.extend([x.strip() for x in str(a).split(',')])
-
     artist_counts = Counter(all_artists)
     top_40 = artist_counts.most_common(40)
     top_artists = [a for a, _ in top_40]
@@ -638,20 +640,16 @@ if 'Artist' in df.columns:
     day_1 = top_artists[:midpoint]
     day_2 = top_artists[midpoint:]
 
-    long_artists = artists[8:]
-max_per_line = 3 if selected_theme == "Glitch City" else 4
-lines = [' • '.join(long_artists[i:i+max_per_line]) for i in range(0, len(long_artists), max_per_line)]
-for idx, line in enumerate(lines):
-    ax.text(0.5, y_start - 0.22 - idx * 0.035, line, fontsize=12, ha='center', color=text_color, zorder=2, fontproperties=custom_font)
-
-
+    # ─── Build Poster ───
     def build_poster(day1, day2):
         text_color = 'white'
         if selected_theme in ['Desert Dusk', 'Glitch City']:
             text_color = 'black'
+
         fig, ax = plt.subplots(figsize=(10, 16))
         ax.axis('off')
 
+        # Background image
         if os.path.exists(bg_path):
             bg_img = Image.open(bg_path)
             ax.imshow(bg_img, extent=[0, 1, 0, 1], aspect='auto', zorder=0)
@@ -659,31 +657,48 @@ for idx, line in enumerate(lines):
             ax.set_facecolor("#121212")
             fig.patch.set_facecolor("#121212")
 
+        # Add translucent background overlay for better readability
         ax.add_patch(plt.Rectangle((0, 0.42), 1, 0.52, color='black', alpha=0.3, zorder=1))
 
-
+        # Draw day section
         def draw_day(title, artists, y_start):
-            ax.text(0.5, y_start, title, fontsize=24, fontweight='bold', ha='center', color=text_color, zorder=1, fontproperties=custom_font)
-            ax.text(0.5, y_start - 0.05, artists[0], fontsize=34, fontweight='bold', ha='center', color='gold', zorder=1, fontproperties=custom_font)
-            ax.text(0.5, y_start - 0.10, ' • '.join(artists[1:4]), fontsize=18, ha='center', color=text_color, zorder=1, fontproperties=custom_font)
-            ax.text(0.5, y_start - 0.15, ' • '.join(artists[4:8]), fontsize=14, ha='center', color='lightgray', zorder=1, fontproperties=custom_font)
-            ax.text(0.5, y_start - 0.22, '\n'.join([' • '.join(artists[i:i+6]) for i in range(8, len(artists), 6)]), fontsize=12, ha='center', color=text_color, zorder=1, fontproperties=custom_font)
+            ax.text(0.5, y_start, title, fontsize=24, fontweight='bold', ha='center',
+                    color=text_color, zorder=2, fontproperties=custom_font)
+            ax.text(0.5, y_start - 0.05, artists[0], fontsize=34, fontweight='bold', ha='center',
+                    color='gold', zorder=2, fontproperties=custom_font)
+            ax.text(0.5, y_start - 0.10, ' • '.join(artists[1:4]), fontsize=18, ha='center',
+                    color=text_color, zorder=2, fontproperties=custom_font)
+            ax.text(0.5, y_start - 0.15, ' • '.join(artists[4:8]), fontsize=14, ha='center',
+                    color='lightgray', zorder=2, fontproperties=custom_font)
 
+            # Handle overflow nicely
+            long_artists = artists[8:]
+            max_per_line = 3 if selected_theme == "Glitch City" else 4
+            lines = [' • '.join(long_artists[i:i+max_per_line]) for i in range(0, len(long_artists), max_per_line)]
+            for idx, line in enumerate(lines):
+                ax.text(0.5, y_start - 0.22 - idx * 0.035, line, fontsize=12, ha='center',
+                        color=text_color, zorder=2, fontproperties=custom_font)
+
+        # Festival title with shadow
         for dx, dy in [(-0.002, -0.002), (0.002, -0.002), (-0.002, 0.002), (0.002, 0.002)]:
-            ax.text(0.5 + dx, 0.96 + dy, "SONICMIRROR FESTIVAL", fontsize=28, fontweight='bold', ha='center', color='white', zorder=1, fontproperties=custom_font)
-        ax.text(0.5, 0.96, "SONICMIRROR FESTIVAL", fontsize=28, fontweight='bold', ha='center', color=text_color, zorder=1, fontproperties=custom_font)
+            ax.text(0.5 + dx, 0.96 + dy, "SONICMIRROR FESTIVAL", fontsize=28, fontweight='bold',
+                    ha='center', color='black', zorder=1, fontproperties=custom_font)
+        ax.text(0.5, 0.96, "SONICMIRROR FESTIVAL", fontsize=28, fontweight='bold',
+                ha='center', color=text_color, zorder=2, fontproperties=custom_font)
 
         draw_day("DAY 1", day1, 0.88)
         draw_day("DAY 2", day2, 0.48)
 
+        # Output buffer
         buf = BytesIO()
         plt.savefig(buf, format='png', bbox_inches='tight')
         buf.seek(0)
         return buf
 
+    # Generate and show
     poster_buf = build_poster(day_1, day_2)
     st.image(poster_buf, caption="Your Festival Lineup", use_container_width=True)
     st.download_button("📥 Download Poster", poster_buf, file_name="sonicmirror_festival.png", mime="image/png")
+
 else:
     st.info("Artist data missing — can't build your lineup.")
-
