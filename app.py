@@ -60,7 +60,7 @@ selected_feats = st.sidebar.multiselect("Select audio features", features, defau
 data['AddedAt'] = pd.to_datetime(data['AddedAt'], errors='coerce', utc=True).dt.tz_convert(None)
 data['ReleaseDate'] = pd.to_datetime(data['ReleaseDate'], errors='coerce', utc=True).dt.tz_convert(None)
 # Compute discovery lag in days
-data['LagDays'] = (data['AddedAt'] - data['ReleaseDate']).dt.days
+data['LagYears'] = ((data['AddedAt'] - data['ReleaseDate']).dt.days / 365.25).round(1)
 
 # ─── Filter & Prepare Dashboard Data ───
 df = data[data['Playlist'].isin(selected)].copy()
@@ -87,12 +87,13 @@ ax.set_title(f"Average {feat} by Playlist")
 st.pyplot(fig)
 
 # ─── Discovery Lag Distribution ───
-st.header("⏱ Discovery Lag Distribution")
+st.header("⏱ Discovery Lag Distribution (in Years)")
 fig2, ax2 = plt.subplots()
 for p in selected:
-    subset = df[df['Playlist']==p]
-    ax2.hist(subset['LagDays'].dropna(), bins=30, alpha=0.5, label=p)
-ax2.set_xlabel('Lag (Days)')
+    subset = df[df['Playlist'] == p]
+    ax2.hist(subset['LagYears'].dropna(), bins=30, alpha=0.5, label=p)
+
+ax2.set_xlabel('Lag (Years)')
 ax2.set_ylabel('Track Count')
 ax2.legend()
 st.pyplot(fig2)
