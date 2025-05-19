@@ -624,8 +624,8 @@ if 'Artist' in df.columns:
     day_2 = top_artists[midpoint:]
 
     def build_poster(day1, day2):
-    fig, ax = plt.subplots(figsize=(10, 16))  # increased size to fit more
-    ax.axis('off')
+        fig, ax = plt.subplots(figsize=(10, 16))  # increased size to fit more
+        ax.axis('off')
 
     # Load background image
     bg_path = "festival_background.jpg"
