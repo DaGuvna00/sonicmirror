@@ -195,31 +195,6 @@ ax4.set_title('Track Mood Distribution by Playlist')
 ax4.legend()
 st.pyplot(fig4)
 
-# ─── Time-Series of Tracks Added ───
-st.header("📈 Tracks Added Over Time")
-# Group by month-year
-df['Month'] = df['AddedAt'].dt.to_period('M').dt.to_timestamp()
-time_data = df.groupby(['Month','Playlist']).size().reset_index(name='Count')
-fig5, ax5 = plt.subplots(figsize=(10,4))
-for p in selected:
-    series = time_data[time_data['Playlist']==p]
-    ax5.plot(series['Month'], series['Count'], marker='o', label=p)
-ax5.set_xlabel('Month')
-ax5.set_ylabel('Number of Tracks Added')
-ax5.set_title('Tracks Added Over Time by Playlist')
-ax5.legend()
-st.pyplot(fig5)
-
-# ─── Seasonal Trend Analysis ───
-st.header("🌦 Seasonal Additions by Month")
-# Extract month name
-df['MonthName'] = df['AddedAt'].dt.month_name()
-season_data = df.groupby(['MonthName','Playlist']).size().unstack(fill_value=0)
-# Ensure month order
-months = ['January','February','March','April','May','June','July','August','September','October','November','December']
-season_data = season_data.reindex(months)
-st.dataframe(season_data)
-
 # ─── Genre & Subgenre Breakdown ───
 import re
 st.header("🎼 Genre Breakdown")
