@@ -649,7 +649,7 @@ if 'Artist' in df.columns:
         # Overlay text only
         for dx, dy in [(-0.002, -0.002), (0.002, -0.002), (-0.002, 0.002), (0.002, 0.002)]:
         ax.text(0.5 + dx, 0.96 + dy, "SONICMIRROR FESTIVAL", fontsize=28, fontweight='bold', ha='center', color='black', zorder=1, family='monospace')
-    ax.text(0.5, 0.96, "SONICMIRROR FESTIVAL", fontsize=28, fontweight='bold', ha='center', color='white', zorder=1, family='monospace')
+        ax.text(0.5, 0.96, "SONICMIRROR FESTIVAL", fontsize=28, fontweight='bold', ha='center', color='white', zorder=1, family='monospace')
         draw_day("DAY 1", day_1, 0.88)
         draw_day("DAY 2", day_2, 0.48)
 
