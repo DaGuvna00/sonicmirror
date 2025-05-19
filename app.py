@@ -599,9 +599,12 @@ if 'ReleaseDate' in df.columns:
 else:
     st.info("Release dates not available for time travel.")
 
+
+# ─── Festival Poster Generator ───
 import matplotlib.pyplot as plt
 from PIL import Image
 from io import BytesIO
+import os
 
 # ─── Festival Poster Generator ───
 st.header("🎪 Downloadable Festival Poster")
@@ -624,28 +627,36 @@ if 'Artist' in df.columns:
 
     def build_poster(day1, day2):
         fig, ax = plt.subplots(figsize=(8, 10))
-        ax.set_facecolor("#121212")
-        fig.patch.set_facecolor("#121212")
         ax.axis('off')
 
-        def draw_day(title, artists, y_start):
-            ax.text(0.5, y_start, title, fontsize=22, fontweight='bold', ha='center', color='white')
-            ax.text(0.5, y_start - 0.05, artists[0], fontsize=28, fontweight='heavy', ha='center', color='gold')
-            ax.text(0.5, y_start - 0.10, ' • '.join(artists[1:4]), fontsize=18, ha='center', color='white')
-            ax.text(0.5, y_start - 0.15, ' • '.join(artists[4:8]), fontsize=14, ha='center', color='lightgray')
-            ax.text(0.5, y_start - 0.20, ' • '.join(artists[8:]), fontsize=10, ha='center', color='gray')
+        # Load background image (no text on it)
+        bg_path = "festival_background.jpg"  # ensure this file has no text baked in
+        if os.path.exists(bg_path):
+            bg_img = Image.open(bg_path)
+            ax.imshow(bg_img, extent=[0, 1, 0, 1], aspect='auto', zorder=0)
+        else:
+            ax.set_facecolor("#121212")
+            fig.patch.set_facecolor("#121212")
 
-        ax.text(0.5, 0.95, "SONICMIRROR FESTIVAL", fontsize=26, fontweight='bold', ha='center', color='cyan')
+        def draw_day(title, artists, y_start):
+            ax.text(0.5, y_start, title, fontsize=22, fontweight='bold', ha='center', color='white', zorder=1)
+            ax.text(0.5, y_start - 0.05, artists[0], fontsize=28, fontweight='heavy', ha='center', color='gold', zorder=1)
+            ax.text(0.5, y_start - 0.10, ' • '.join(artists[1:4]), fontsize=18, ha='center', color='white', zorder=1)
+            ax.text(0.5, y_start - 0.15, ' • '.join(artists[4:8]), fontsize=14, ha='center', color='lightgray', zorder=1)
+            ax.text(0.5, y_start - 0.20, ' • '.join(artists[8:]), fontsize=10, ha='center', color='gray', zorder=1)
+
+        # Overlay text only
+        ax.text(0.5, 0.95, "SONICMIRROR FESTIVAL", fontsize=26, fontweight='bold', ha='center', color='white', zorder=1)
         draw_day("DAY 1", day1, 0.85)
         draw_day("DAY 2", day2, 0.55)
 
         buf = BytesIO()
-        plt.savefig(buf, format='png', bbox_inches='tight', facecolor=fig.get_facecolor())
+        plt.savefig(buf, format='png', bbox_inches='tight')
         buf.seek(0)
         return buf
 
     poster_buf = build_poster(day_1, day_2)
-    st.image(poster_buf, caption="Your Festival Lineup", use_column_width=True)
+    st.image(poster_buf, caption="Your Festival Lineup", use_container_width=True)
     st.download_button("📥 Download Poster", poster_buf, file_name="sonicmirror_festival.png", mime="image/png")
 else:
     st.info("Artist data missing — can't build your lineup.")
