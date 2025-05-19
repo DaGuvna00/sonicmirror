@@ -395,7 +395,6 @@ else:
         st.subheader("📝 AI Synopsis & Recommendations")
         st.write(ai_output)
 
-# ─── Core Analytics End: Now optional sentiment behind button ───
 # ─── Lyrics Sentiment Analysis (Optional, Button-Triggered) ───
 st.header("🎭 Lyrics Sentiment Analysis (Optional)")
 st.info("Lyrics sentiment can take a while—click below to run it after core analytics load.")
