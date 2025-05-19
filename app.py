@@ -602,10 +602,26 @@ else:
 import matplotlib.pyplot as plt
 from PIL import Image
 from io import BytesIO
+from matplotlib import font_manager as fm
 import os
 
 # ─── Festival Poster Generator ───
 st.header("🎪 Downloadable Festival Poster")
+
+# 🎨 Background and Font Options
+bg_options = {
+    "Space Rave": ("space_rave.jpg", "rave_font.ttf"),
+    "Desert Dusk": ("desert_dusk.jpg", "desert_font.ttf"),
+    "Glitch City": ("glitch_city.jpg", "glitch_font.ttf")
+}
+
+selected_theme = st.selectbox("Choose your poster style:", list(bg_options.keys()))
+bg_path, font_path = bg_options[selected_theme]
+custom_font = None
+if os.path.exists(font_path):
+    custom_font = fm.FontProperties(fname=font_path)
+else:
+    custom_font = fm.FontProperties(family='monospace')
 
 if 'Artist' in df.columns:
     from collections import Counter
@@ -615,20 +631,17 @@ if 'Artist' in df.columns:
         all_artists.extend([x.strip() for x in str(a).split(',')])
 
     artist_counts = Counter(all_artists)
-    top_40 = artist_counts.most_common(40)  # increase from 20 to 40
+    top_40 = artist_counts.most_common(40)
     top_artists = [a for a, _ in top_40]
 
-    # Split into two days
     midpoint = len(top_artists) // 2
     day_1 = top_artists[:midpoint]
     day_2 = top_artists[midpoint:]
 
     def build_poster(day1, day2):
-        fig, ax = plt.subplots(figsize=(10, 16))  # increased size to fit more
+        fig, ax = plt.subplots(figsize=(10, 16))
         ax.axis('off')
 
-        # Load background image (no text on it)
-        bg_path = "festival_background.jpg"  # ensure this file has no text baked in
         if os.path.exists(bg_path):
             bg_img = Image.open(bg_path)
             ax.imshow(bg_img, extent=[0, 1, 0, 1], aspect='auto', zorder=0)
@@ -637,18 +650,18 @@ if 'Artist' in df.columns:
             fig.patch.set_facecolor("#121212")
 
         def draw_day(title, artists, y_start):
-            ax.text(0.5, y_start, title, fontsize=24, fontweight='bold', ha='center', color='white', zorder=1, family='monospace')
-            ax.text(0.5, y_start - 0.05, artists[0], fontsize=34, fontweight='bold', ha='center', color='gold', zorder=1, family='monospace')
-            ax.text(0.5, y_start - 0.10, ' • '.join(artists[1:4]), fontsize=18, ha='center', color='white', zorder=1, family='monospace')
-            ax.text(0.5, y_start - 0.15, ' • '.join(artists[4:8]), fontsize=14, ha='center', color='lightgray', zorder=1, family='monospace')
-            ax.text(0.5, y_start - 0.22, '\n'.join([' • '.join(artists[i:i+6]) for i in range(8, len(artists), 6)]), fontsize=12, ha='center', color='lightgray', zorder=1, family='monospace')
+            ax.text(0.5, y_start, title, fontsize=24, fontweight='bold', ha='center', color='white', zorder=1, fontproperties=custom_font)
+            ax.text(0.5, y_start - 0.05, artists[0], fontsize=34, fontweight='bold', ha='center', color='gold', zorder=1, family=font_family)
+            ax.text(0.5, y_start - 0.10, ' • '.join(artists[1:4]), fontsize=18, ha='center', color='white', zorder=1, family=font_family)
+            ax.text(0.5, y_start - 0.15, ' • '.join(artists[4:8]), fontsize=14, ha='center', color='lightgray', zorder=1, family=font_family)
+            ax.text(0.5, y_start - 0.22, '\n'.join([' • '.join(artists[i:i+6]) for i in range(8, len(artists), 6)]), fontsize=12, ha='center', color='lightgray', zorder=1, family=font_family)
 
-        # Title glow
         for dx, dy in [(-0.002, -0.002), (0.002, -0.002), (-0.002, 0.002), (0.002, 0.002)]:
-            ax.text(0.5 + dx, 0.96 + dy, "SONICMIRROR FESTIVAL", fontsize=28, fontweight='bold', ha='center', color='black', zorder=1, family='monospace')
-        ax.text(0.5, 0.96, "SONICMIRROR FESTIVAL", fontsize=28, fontweight='bold', ha='center', color='white', zorder=1, family='monospace')
-        draw_day("DAY 1", day_1, 0.88)
-        draw_day("DAY 2", day_2, 0.48)
+            ax.text(0.5 + dx, 0.96 + dy, "SONICMIRROR FESTIVAL", fontsize=28, fontweight='bold', ha='center', color='black', zorder=1, family=font_family)
+        ax.text(0.5, 0.96, "SONICMIRROR FESTIVAL", fontsize=28, fontweight='bold', ha='center', color='white', zorder=1, family=font_family)
+
+        draw_day("DAY 1", day1, 0.88)
+        draw_day("DAY 2", day2, 0.48)
 
         buf = BytesIO()
         plt.savefig(buf, format='png', bbox_inches='tight')
