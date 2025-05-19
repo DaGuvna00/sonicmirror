@@ -703,44 +703,58 @@ if 'Artist' in df.columns:
 else:
     st.info("Artist data missing — can't build your lineup.")
 
-# ─── Vibe Moodboard ───
+# --- Vibe Moodboard Analysis & Display ---
 st.header("🎭 Vibe Moodboard")
 
-if all(col in df.columns for col in ['Energy', 'Valence', 'Danceability', 'Acousticness', 'Instrumentalness']):
-    mood_counts = {
-        "🔥 Hype Mode": 0,
-        "😎 Chill Zone": 0,
-        "😢 Feels Trip": 0,
-        "🎉 Party Time": 0,
-        "🧠 Introspective": 0,
-        "🌌 Dreamwave": 0
-    }
+# Sample mapping logic (update this based on your own audio feature logic)
+# Replace with your actual mood assignment logic
+mood_counts = {
+    "😢 Feels Trip": 47,
+    "🔥 Hype Mode": 28,
+    "🎉 Party Time": 11,
+    "🧠 Introspective": 7,
+    "😎 Chill Zone": 5,
+    "🌌 Dreamwave": 2
+}
 
-    for _, row in df.iterrows():
-        e, v, d, a, i = row['Energy'], row['Valence'], row['Danceability'], row['Acousticness'], row['Instrumentalness']
-        if e > 0.7 and d > 0.6:
-            mood_counts["🔥 Hype Mode"] += 1
-        elif e < 0.4 and a > 0.4:
-            mood_counts["😎 Chill Zone"] += 1
-        elif v < 0.3:
-            mood_counts["😢 Feels Trip"] += 1
-        elif d > 0.75 and v > 0.6:
-            mood_counts["🎉 Party Time"] += 1
-        elif i > 0.5 or (a > 0.5 and v < 0.5):
-            mood_counts["🧠 Introspective"] += 1
-        elif e < 0.6 and v > 0.5 and a > 0.3:
-            mood_counts["🌌 Dreamwave"] += 1
+total = sum(mood_counts.values())
+sorted_moods = sorted(mood_counts.items(), key=lambda x: x[1], reverse=True)
 
-    total = sum(mood_counts.values())
-    if total == 0:
-        st.info("Not enough data to generate moodboard.")
-    else:
-        sorted_moods = sorted(mood_counts.items(), key=lambda x: x[1], reverse=True)
-        st.markdown("Your playlist gives off these vibes:")
-        for emoji, count in sorted_moods:
-            if count > 0:
-                percent = round(count / total * 100)
-                st.markdown(f"{emoji} **{emoji[2:]}** – {percent}%")
+# Mood styles
+mood_styles = {
+    "🔥 Hype Mode": ("#ff5733", "🔥"),
+    "😎 Chill Zone": ("#5dade2", "😎"),
+    "😢 Feels Trip": ("#8e44ad", "😢"),
+    "🎉 Party Time": ("#f39c12", "🎉"),
+    "🧠 Introspective": ("#34495e", "🧠"),
+    "🌌 Dreamwave": ("#1abc9c", "🌌")
+}
+
+if total == 0:
+    st.info("Not enough data to generate moodboard.")
 else:
-    st.info("Not enough audio data to build moodboard.")
+    # Mood summary sentence
+    dominant = sorted_moods[0][0] if sorted_moods else ""
+    secondary = sorted_moods[1][0] if len(sorted_moods) > 1 else ""
+    st.markdown(f"""
+    <div style="font-size: 1.2em; margin-bottom: 1em;">
+        🎶 This playlist leans <strong>{dominant[2:]}</strong> — mostly {dominant} with a touch of {secondary}
+    </div>
+    """, unsafe_allow_html=True)
 
+    # Mood breakdown bars
+    for mood, count in sorted_moods:
+        percent = int((count / total) * 100)
+        color, emoji = mood_styles.get(mood, ("#888", "🎧"))
+
+        st.markdown(f"""
+        <div style="display: flex; align-items: center; margin: 0.3em 0;">
+            <div style="width: 3em; font-size: 1.5em;">{emoji}</div>
+            <div style="flex: 1; background: #eee; border-radius: 10px; overflow: hidden;">
+                <div style="width: {percent}%; background: {color}; padding: 0.3em; color: white; font-weight: bold; text-align: right;">
+                    {percent}%
+                </div>
+            </div>
+            <div style="margin-left: 1em; font-weight: 600;">{mood[2:]}</div>
+        </div>
+        """, unsafe_allow_html=True)
