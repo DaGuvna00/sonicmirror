@@ -111,10 +111,12 @@ mood_df = df[df['Playlist'] == selected_mood_playlist]
 if not mood_df.empty and all(f in mood_df.columns for f in mood_features):
     avg_vals = mood_df[mood_features].mean()
 
-    labels = mood_features + [mood_features[0]]
-    values = avg_vals.tolist() + [avg_vals.tolist()[0]]
+    labels = mood_features
+    values = avg_vals.tolist()
+    values += values[:1]  # duplicate first value for full loop
     angles = np.linspace(0, 2 * np.pi, len(labels), endpoint=False).tolist()
-    angles += angles[:1]
+    angles += angles[:1]  # same for angles
+
 
     fig_mood, ax_mood = plt.subplots(figsize=(6, 6), subplot_kw=dict(polar=True))
     ax_mood.plot(angles, values, color='mediumorchid', linewidth=2)
