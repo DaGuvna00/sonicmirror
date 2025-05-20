@@ -262,6 +262,44 @@ if len(avgs) > 1:
 else:
     st.info("At least 2 playlists are needed to compute PCA positioning.")
 
+# ─── Unique Moments & Outliers ───
+st.header("🧬 Unique Tracks: Vocals, Volume & Vibes")
+
+# Prep data
+outliers_df = df.copy()
+outliers_df = outliers_df[['Playlist', 'Track Name', 'Artist', 'Speechiness', 'Instrumentalness', 'Loudness', 'Energy']].dropna()
+
+# Most speech-like
+speechy = outliers_df.sort_values(by='Speechiness', ascending=False).head(5)
+st.subheader("🎙️ Most Speech-Driven Tracks")
+st.dataframe(speechy[['Track Name', 'Artist', 'Speechiness']])
+
+# Most instrumental
+instr = outliers_df.sort_values(by='Instrumentalness', ascending=False).head(5)
+st.subheader("🎼 Most Instrumental Tracks")
+st.dataframe(instr[['Track Name', 'Artist', 'Instrumentalness']])
+
+# Loudest and quietest
+loudest = outliers_df.sort_values(by='Loudness', ascending=False).head(3)
+quietest = outliers_df.sort_values(by='Loudness', ascending=True).head(3)
+st.subheader("🔊 Loudest & Most Mellow")
+st.markdown("**Loudest:**")
+st.dataframe(loudest[['Track Name', 'Artist', 'Loudness']])
+st.markdown("**Quietest:**")
+st.dataframe(quietest[['Track Name', 'Artist', 'Loudness']])
+
+# Energy outliers (very low or high)
+st.subheader("⚡ Most Chill vs Hyper")
+chill = outliers_df.sort_values(by='Energy').head(3)
+hype = outliers_df.sort_values(by='Energy', ascending=False).head(3)
+col1, col2 = st.columns(2)
+with col1:
+    st.markdown("😴 Chillest:")
+    st.dataframe(chill[['Track Name', 'Artist', 'Energy']])
+with col2:
+    st.markdown("💥 Most Hype:")
+    st.dataframe(hype[['Track Name', 'Artist', 'Energy']])
+
 
 
 # ─── Track Popularity & "Hidden Gems" ───
