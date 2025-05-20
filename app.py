@@ -328,30 +328,18 @@ if 'Popularity' in df.columns:
 else:
     st.warning("No 'Popularity' column found in your data for popularity analysis.")
 
-# ─── Hidden Gems Detector ───
-st.header("💎 Hidden Gems")
+# ─── Tempo Heatmap by Playlist ───
+st.header("🎚️ Tempo Heatmap")
 
-# Safety check for required columns
-required_cols = ['Popularity', 'Danceability', 'Energy', 'Valence']
-if all(col in df.columns for col in required_cols):
-
-    # Auto-detect track and artist column names
-    track_col = next((c for c in df.columns if c.lower().strip() in ['track name', 'track']), None)
-    artist_col = next((c for c in df.columns if c.lower().strip() == 'artist'), None)
-
-    if track_col and artist_col:
-        gem_df = df.copy()
-        # Normalize features for comparison
-        gem_df['GemScore'] = gem_df[['Danceability', 'Energy', 'Valence']].mean(axis=1)
-        gems = gem_df[(gem_df['Popularity'] <= 40) & (gem_df['GemScore'] >= 0.6)]
-        gems_sorted = gems.sort_values(by='GemScore', ascending=False).head(10)
-
-        st.write("These tracks have **low popularity** but high musical quality (danceable, energetic, feel-good):")
-        st.dataframe(gems_sorted[[track_col, artist_col, 'Popularity', 'GemScore']])
-    else:
-        st.warning("Missing track or artist column to identify gems.")
+if 'Tempo' in df.columns and 'Playlist' in df.columns:
+    tempo_avg = df.groupby('Playlist')['Tempo'].mean().sort_values()
+    fig_tempo, ax_tempo = plt.subplots(figsize=(8, 5))
+    sns.heatmap(tempo_avg.to_frame().T, cmap="magma", annot=True, fmt=".0f", cbar=True, linewidths=1, ax=ax_tempo)
+    ax_tempo.set_title("Average Tempo by Playlist")
+    ax_tempo.set_ylabel("")
+    st.pyplot(fig_tempo)
 else:
-    st.warning("Hidden Gems detection requires columns: Popularity, Danceability, Energy, and Valence.")
+    st.warning("Tempo or Playlist column not found in the data.")
 
 
 # Key & Tempo Trajectory
