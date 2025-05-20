@@ -17,6 +17,8 @@ uploaded_files = st.sidebar.file_uploader(
     type=["csv","xls","xlsx"],
     accept_multiple_files=True
 )
+st.write("Uploaded Files:", uploaded_files)
+
 
 # ─── Parse and Combine CSVs/Excels ───
 if uploaded_files:
