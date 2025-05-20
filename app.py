@@ -1462,6 +1462,12 @@ with tab3:
         zodiac = "🚀 Futurebender – Forward-thinking, fresh"
     else:
         zodiac = "🌀 Fringe Oracle – Genre-resistant, beautifully weird"
+        
+ st.markdown(f"""
+    **🔮 Your Playlist's Music Zodiac**
+
+    - **Zodiac Sign:** {zodiac}
+    """)
 
 with tab4:
     # Pull features
@@ -1510,8 +1516,4 @@ with tab4:
         ax.set_title("Elemental Breakdown of Playlist")
         st.pyplot(fig)
 
-    st.markdown(f"""
-    **🔮 Your Playlist's Music Zodiac**
-
-    - **Zodiac Sign:** {zodiac}
-    """)
+   
