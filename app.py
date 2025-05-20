@@ -1188,7 +1188,7 @@ mbti_features = ['Energy', 'Valence', 'Danceability', 'Acousticness',
                  'Instrumentalness', 'Speechiness', 'Tempo', 'LagDays']
 
 if all(f in df.columns for f in mbti_features):
-    mbti_playlist = st.selectbox("Select a playlist for MBTI profiling", df['Playlist'].unique(), key="mbti_select")
+    mbti_playlist = st.selectbox("Select a playlist for MBTI profiling", df['Playlist'].unique(), key="mbti_select_unique")
 
     avg = df[df['Playlist'] == mbti_playlist][mbti_features].mean()
 
