@@ -19,6 +19,16 @@ uploaded_files = st.sidebar.file_uploader(
 )
 st.write("Uploaded Files:", uploaded_files)
 
+try:
+    if f.name.lower().endswith('.csv'):
+        df = pd.read_csv(f)
+    else:
+        sheets = pd.read_excel(f, sheet_name=None)
+        df = pd.concat(sheets.values(), ignore_index=True)
+    st.success(f"Parsed {f.name}")
+except Exception as e:
+    st.error(f"Could not parse {f.name}: {e}")
+
 
 # ─── Parse and Combine CSVs/Excels ───
 if uploaded_files:
