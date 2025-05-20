@@ -1411,6 +1411,56 @@ with tab1:
     - **Social Type:** {social}  
     - **Hobbies:** {hobby}
     """)
+    st.markdown("---")
+    st.subheader("🧬 Persona Name Generator")
+
+    # Core name pools
+    genre_core = top_genre.lower()
+    name_stems = {
+        "pop": ["Nova", "Echo", "Aura", "Raye", "Glow"],
+        "rock": ["Ash", "Riot", "Stone", "Vex", "Jett"],
+        "hip hop": ["Verse", "Flex", "Dusk", "Shade", "Kruz"],
+        "electronic": ["Loop", "Nova", "Flux", "Byte", "Pulse"],
+        "folk": ["Hollow", "Bram", "Wren", "Lune", "Moss"],
+        "indie": ["Echo", "Field", "Blue", "Sage", "Vale"],
+        "metal": ["Crux", "Pyre", "Thorn", "Hex", "Grimm"],
+        "jazz": ["Smoke", "Velvet", "Keys", "Miles", "Blue"],
+        "r&b": ["Soul", "Velour", "Muse", "Gold", "Rayne"],
+        "ambient": ["Drift", "Still", "Nimbus", "Nox", "Vapor"],
+    }
+
+    suffix_pool = {
+        "🔥 Fire": ["Flare", "Riot", "Wild", "Bolt", "Rush"],
+        "🌊 Water": ["Tide", "Flow", "Mist", "Deep", "Wave"],
+        "🌪 Air": ["Whirl", "Haze", "Echo", "Current", "Drift"],
+        "🌱 Earth": ["Root", "Bloom", "Stone", "Field", "Shade"]
+    }
+
+    import random
+
+    # Generate N variations
+    def generate_names(n=6):
+        base_pool = ["Echo"]
+        for g in name_stems:
+            if g in genre_core:
+                base_pool = name_stems[g]
+                break
+        suffixes = suffix_pool.get(dominant[0], ["Void"])
+        return [f"{random.choice(base_pool)} {random.choice(suffixes)}" for _ in range(n)]
+
+    # Reroll button
+    if 'reroll_count' not in st.session_state:
+        st.session_state['reroll_count'] = 0
+
+    if st.button("🎲 Generate More Names"):
+        st.session_state['reroll_count'] += 1
+
+    names = generate_names()
+
+    st.markdown("Here are some sonic alter egos for your playlist:")
+    for name in names:
+        st.markdown(f"- `{name}`")
+
 
 # ─🌌 Birth Chart Tab ─
 with tab2:
