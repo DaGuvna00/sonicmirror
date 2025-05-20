@@ -1270,3 +1270,69 @@ if bias_messages:
         st.markdown(f"- {msg}")
 else:
     st.success("🎯 You're a musical free spirit — no obvious cognitive biases detected.")
+
+# ─── 🧠 Cognitive Bias Radar Chart ───
+st.header("🧠 Cognitive Bias Profile")
+
+bias_features = ['Recency', 'Nostalgia', 'Confirmation', 'Novelty Aversion', 'Emotional Looping', 'Herd Following']
+bias_scores = {b: 0 for b in bias_features}
+
+bias_playlist = st.selectbox("Select playlist to analyze", df['Playlist'].unique(), key="bias_select")
+
+df_bias = df[df['Playlist'] == bias_playlist].copy()
+
+# Bias calculations
+if 'ReleaseDate' in df_bias.columns:
+    now = pd.Timestamp.now()
+    one_year_ago = now - pd.DateOffset(years=1)
+    recency = (df_bias['ReleaseDate'] > one_year_ago).mean()
+    bias_scores['Recency'] = recency
+
+    decades = df_bias['ReleaseDate'].dt.year.dropna().floordiv(10) * 10
+    if not decades.empty:
+        top_decade_pct = (decades == decades.mode()[0]).mean()
+        bias_scores['Nostalgia'] = top_decade_pct
+
+if 'Genres' in df_bias.columns:
+    genre_series = df_bias['Genres'].dropna().astype(str).str.split(',').explode().str.strip()
+    if not genre_series.empty:
+        top_genre_pct = genre_series.value_counts(normalize=True).iloc[0]
+        bias_scores['Confirmation'] = top_genre_pct
+
+if 'Artist' in df_bias.columns:
+    artist_counts = df_bias['Artist'].dropna().astype(str).value_counts()
+    new_artist_pct = (artist_counts == 1).mean()
+    bias_scores['Novelty Aversion'] = 1 - new_artist_pct  # inversion: low novelty = high aversion
+
+if all(c in df_bias.columns for c in ['Valence', 'Energy']):
+    val = df_bias['Valence'].mean()
+    energy = df_bias['Energy'].mean()
+    if val < 0.35 and energy < 0.5:
+        bias_scores['Emotional Looping'] = 0.8
+    elif val > 0.65 and energy > 0.6:
+        bias_scores['Emotional Looping'] = 0.6
+    else:
+        bias_scores['Emotional Looping'] = 0.2
+
+if 'Popularity' in df_bias.columns:
+    pop = df_bias['Popularity'].dropna().mean()
+    bias_scores['Herd Following'] = min(pop / 100, 1.0)
+
+# ─ Radar Chart ─
+angles = np.linspace(0, 2 * np.pi, len(bias_features), endpoint=False).tolist()
+values = [bias_scores[b] for b in bias_features]
+values += values[:1]
+angles += angles[:1]
+
+fig_bias, ax_bias = plt.subplots(figsize=(6, 6), subplot_kw=dict(polar=True))
+ax_bias.plot(angles, values, linewidth=2, color='crimson')
+ax_bias.fill(angles, values, alpha=0.25, color='crimson')
+ax_bias.set_xticks(angles[:-1])
+ax_bias.set_xticklabels(bias_features)
+ax_bias.set_title(f"Cognitive Bias Radar – {bias_playlist}")
+ax_bias.set_ylim(0, 1)
+st.pyplot(fig_bias)
+
+# Optional table
+if st.checkbox("Show bias scores as table"):
+    st.dataframe(pd.DataFrame.from_dict(bias_scores, orient='index', columns=['Score']).round(2))
