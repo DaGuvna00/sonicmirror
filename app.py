@@ -301,32 +301,56 @@ if track_col and artist_col:
 else:
     st.warning("Missing 'Track' or 'Artist' column in your data.")
 
-# ─── Feature Timeline Explorer ───
+# ─── 📈 Multi-Playlist Feature Timeline Explorer ───
 st.header("📈 Feature Timeline Explorer")
 
-# Choose playlist and feature
-feature_options = ['Energy', 'Valence', 'Danceability', 'Acousticness', 'Instrumentalness', 'Speechiness', 'Loudness']
-if 'Playlist' in df.columns and 'AddedAt' in df.columns:
-    playlist_choice = st.selectbox("Select Playlist", df['Playlist'].unique())
-    feature_choice = st.selectbox("Select Audio Feature", feature_options)
+feature_options = ['Energy', 'Valence', 'Danceability', 'Acousticness',
+                   'Instrumentalness', 'Speechiness', 'Loudness']
 
-    subset = df[df['Playlist'] == playlist_choice].copy()
-    subset['AddedAt'] = pd.to_datetime(subset['AddedAt'], errors='coerce')
+if 'Playlist' in df.columns and 'AddedAt' in df.columns and 'ReleaseDate' in df.columns:
 
-    # Filter and sort
-    subset = subset.dropna(subset=['AddedAt', feature_choice])
-    subset = subset.sort_values('AddedAt')
+    playlist_choices = st.multiselect("Select Playlist(s)", df['Playlist'].unique(), default=df['Playlist'].unique()[:2])
+    feature_choice = st.selectbox("Select Audio Feature", feature_options, key="timeline_feature")
+    time_basis = st.radio("Time axis based on:", ["Date Added", "Release Date"], horizontal=True)
+    show_rolling = st.checkbox("Show 5-point rolling average", value=True)
 
-    # Plot
-    fig_feat, ax_feat = plt.subplots()
-    ax_feat.plot(subset['AddedAt'], subset[feature_choice], marker='o', linestyle='-')
-    ax_feat.set_title(f"{feature_choice} Over Time in '{playlist_choice}'")
-    ax_feat.set_ylabel(feature_choice)
-    ax_feat.set_xlabel("Date Added")
-    ax_feat.grid(True)
-    st.pyplot(fig_feat)
+    time_col = 'AddedAt' if time_basis == "Date Added" else 'ReleaseDate'
+    df[time_col] = pd.to_datetime(df[time_col], errors='coerce')
+
+    fig, ax = plt.subplots(figsize=(10, 5))
+
+    color_cycle = plt.cm.get_cmap("tab10", len(playlist_choices))
+
+    for i, playlist in enumerate(playlist_choices):
+        subset = df[df['Playlist'] == playlist].copy()
+        subset = subset.dropna(subset=[time_col, feature_choice])
+        subset = subset.sort_values(by=time_col)
+
+        if not subset.empty:
+            ax.plot(subset[time_col], subset[feature_choice],
+                    marker='o', linestyle='-', alpha=0.5,
+                    label=f"{playlist}", color=color_cycle(i))
+
+            if show_rolling and len(subset) >= 5:
+                subset['RollingAvg'] = subset[feature_choice].rolling(window=5).mean()
+                ax.plot(subset[time_col], subset['RollingAvg'],
+                        linestyle='--', linewidth=2, color=color_cycle(i))
+
+            # Highlight peaks
+            peak = subset.loc[subset[feature_choice].idxmax()]
+            low = subset.loc[subset[feature_choice].idxmin()]
+            ax.axhline(peak[feature_choice], color=color_cycle(i), linestyle=':', alpha=0.4)
+            ax.axhline(low[feature_choice], color=color_cycle(i), linestyle=':', alpha=0.2)
+
+    ax.set_title(f"{feature_choice} Over Time", fontsize=14)
+    ax.set_ylabel(feature_choice)
+    ax.set_xlabel(time_col)
+    ax.grid(True)
+    ax.legend(loc='best')
+    st.pyplot(fig)
 else:
-    st.warning("Missing 'AddedAt' or 'Playlist' columns to build timeline.")
+    st.warning("Missing Playlist, AddedAt, or ReleaseDate columns.")
+
 
 
 
