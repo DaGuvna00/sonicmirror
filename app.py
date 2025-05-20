@@ -11,23 +11,38 @@ st.set_page_config(page_title="SonicMirror Exportify Analyzer", layout="wide")
 st.title("🎶 SonicMirror – Exportify Playlist Analyzer")
 
 # ─── File Upload ───
-st.sidebar.header("📂 Upload Exportify Exports")
-uploaded_files = st.sidebar.file_uploader(
-    "Select one or more Exportify CSV/Excel files", 
-    type=["csv","xls","xlsx"],
-    accept_multiple_files=True
-)
-st.write("Uploaded Files:", uploaded_files)
+st.sidebar.header("📂 Upload Exportify Exports")if uploaded_files:
+    playlists = []
+    for f in uploaded_files:
+        name = f.name.rsplit('.', 1)[0]
+        df = None
+        try:
+            if f.name.lower().endswith('.csv'):
+                df = pd.read_csv(f)
+            else:
+                sheets = pd.read_excel(f, sheet_name=None)
+                df = pd.concat(sheets.values(), ignore_index=True)
 
-try:
-    if f.name.lower().endswith('.csv'):
-        df = pd.read_csv(f)
-    else:
-        sheets = pd.read_excel(f, sheet_name=None)
-        df = pd.concat(sheets.values(), ignore_index=True)
-    st.success(f"Parsed {f.name}")
-except Exception as e:
-    st.error(f"Could not parse {f.name}: {e}")
+            # Standardize column names
+            df = df.rename(columns={
+                'Artist Name(s)': 'Artist',
+                'Track Name': 'Track',
+                'Added At': 'AddedAt',
+                'Release Date': 'ReleaseDate'
+            })
+
+            df['Playlist'] = name
+            playlists.append(df)
+
+        except Exception:
+            pass  # fail silently
+
+    if not playlists:
+        st.stop()  # Stop app if nothing parsed
+    data = pd.concat(playlists, ignore_index=True)
+else:
+    st.stop()  # Stop if nothing uploaded
+
 
 
 # ─── Parse and Combine CSVs/Excels ───
