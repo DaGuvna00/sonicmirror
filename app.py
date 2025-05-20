@@ -1181,6 +1181,19 @@ with st.expander("🎛 Fine-tune MBTI Thresholds"):
         "ENTJ": "🚀 **The Trailblazer** – Strategic and sharp-edged. Even your chill songs march with intent.",
     }
 
+    # ─ MBTI Decoder ─
+st.header("🧬 MBTI Personality Match")
+
+mbti_features = ['Energy', 'Valence', 'Danceability', 'Acousticness',
+                 'Instrumentalness', 'Speechiness', 'Tempo', 'LagDays']
+
+if all(f in df.columns for f in mbti_features):
+    mbti_playlist = st.selectbox("Select a playlist for MBTI profiling", df['Playlist'].unique(), key="mbti_select")
+
+    avg = df[df['Playlist'] == mbti_playlist][mbti_features].mean()
+
+    # ... your bar chart, sliders, logic, and MBTI assignment ...
+
     # ─ Final Output ─
     st.subheader(f"🧬 Your Playlist MBTI Type: `{mbti}`")
     st.markdown(mbti_profiles.get(mbti, f"🌀 **The Enigma ({mbti})** – Unclassifiable, genre-resistant, and probably brilliant."))
@@ -1193,5 +1206,6 @@ with st.expander("🎛 Fine-tune MBTI Thresholds"):
         - **Judging (J) vs Perceiving (P)** → Tempo Std Dev: `{tempo_std:.1f}`, Lag Std Dev: `{lag_std:.1f}`
         """)
         st.caption("You can adjust thresholds above to reflect different interpretations of your musical personality.")
-    else:
+
+else:
     st.warning("Not enough audio feature data to compute MBTI type.")
