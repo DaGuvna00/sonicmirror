@@ -1024,3 +1024,54 @@ if 'ReleaseDate' in df.columns and 'Duration (ms)' in df.columns:
         st.info("No valid release year or duration data available.")
 else:
     st.warning("This feature requires both 'ReleaseDate' and 'Duration (ms)' columns.")
+
+# ─── 🤝 Top Collaborations Detector ───
+st.header("🤝 Top Collaborations")
+
+if 'Artist' in df.columns:
+    from collections import Counter
+    import itertools
+
+    # Split artists and explode
+    artist_lists = df['Artist'].dropna().apply(lambda x: [a.strip() for a in str(x).split(',')])
+    df['ArtistList'] = artist_lists
+
+    # Count all pairs
+    all_pairs = []
+    for artist_group in artist_lists:
+        if len(artist_group) > 1:
+            all_pairs.extend(itertools.combinations(sorted(set(artist_group)), 2))
+
+    pair_counts = Counter(all_pairs)
+    top_pairs = pair_counts.most_common(10)
+
+    st.subheader("👯 Most Frequent Collaborating Artist Pairs")
+    if top_pairs:
+        for (a1, a2), count in top_pairs:
+            st.markdown(f"- **{a1}** + **{a2}** → {count} tracks")
+    else:
+        st.info("No recurring artist pairs found.")
+
+    # Songs with 3+ collaborators
+    multi_collabs = df[df['ArtistList'].apply(lambda x: len(x) >= 3)]
+    st.subheader("🎤 Songs with 3 or More Collaborators")
+    if not multi_collabs.empty:
+        display_cols = [col for col in ['Track Name', 'Artist', 'Playlist'] if col in df.columns]
+        st.dataframe(multi_collabs[display_cols])
+    else:
+        st.info("No songs found with 3 or more listed artists.")
+
+    # Artists with most collabs
+    all_artists_flat = list(itertools.chain.from_iterable(artist_lists))
+    artist_count = Counter(all_artists_flat)
+    collab_counts = {k: v for k, v in artist_count.items() if v > 1}
+    top_collab_artists = Counter(collab_counts).most_common(10)
+
+    st.subheader("🏆 Artists with Most Collaborations")
+    if top_collab_artists:
+        for artist, count in top_collab_artists:
+            st.markdown(f"- **{artist}** → {count} total appearances")
+    else:
+        st.info("No collaborating artists found more than once.")
+else:
+    st.warning("Missing 'Artist' column in your data.")
