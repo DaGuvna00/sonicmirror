@@ -1336,3 +1336,79 @@ st.pyplot(fig_bias)
 # Optional table
 if st.checkbox("Show bias scores as table"):
     st.dataframe(pd.DataFrame.from_dict(bias_scores, orient='index', columns=['Score']).round(2))
+
+# ─── 🧠 Cross-Playlist Bias Comparison ───
+st.header("📊 Cross-Playlist Bias Comparison")
+
+selected_playlists = st.multiselect(
+    "Select playlists to compare",
+    df['Playlist'].unique().tolist(),
+    default=df['Playlist'].unique().tolist()[:2],
+    key="bias_compare"
+)
+
+bias_summary = []
+
+for playlist in selected_playlists:
+    sub = df[df['Playlist'] == playlist].copy()
+    scores = {'Playlist': playlist}
+
+    # Recency Bias
+    if 'ReleaseDate' in sub.columns:
+        recent = (sub['ReleaseDate'] > (pd.Timestamp.now() - pd.DateOffset(years=1))).mean()
+        scores['Recency'] = recent
+
+        decades = sub['ReleaseDate'].dt.year.dropna().floordiv(10) * 10
+        scores['Nostalgia'] = (decades == decades.mode()[0]).mean() if not decades.empty else 0
+
+    # Confirmation Bias
+    if 'Genres' in sub.columns:
+        genres = sub['Genres'].dropna().astype(str).str.split(',').explode().str.strip()
+        scores['Confirmation'] = genres.value_counts(normalize=True).iloc[0] if not genres.empty else 0
+
+    # Novelty Aversion
+    if 'Artist' in sub.columns:
+        artist_counts = sub['Artist'].dropna().astype(str).value_counts()
+        new_pct = (artist_counts == 1).mean()
+        scores['Novelty Aversion'] = 1 - new_pct
+
+    # Emotional Looping
+    if all(x in sub.columns for x in ['Valence', 'Energy']):
+        val, energy = sub['Valence'].mean(), sub['Energy'].mean()
+        if val < 0.35 and energy < 0.5:
+            scores['Emotional Looping'] = 0.8
+        elif val > 0.65 and energy > 0.6:
+            scores['Emotional Looping'] = 0.6
+        else:
+            scores['Emotional Looping'] = 0.2
+
+    # Herd Following
+    if 'Popularity' in sub.columns:
+        scores['Herd Following'] = min(sub['Popularity'].dropna().mean() / 100, 1.0)
+
+    bias_summary.append(scores)
+
+# Convert to DataFrame
+bias_df = pd.DataFrame(bias_summary).set_index("Playlist")[bias_features]
+
+# Plot radar charts per playlist
+st.subheader("🕸 Bias Profiles per Playlist")
+
+for playlist in bias_df.index:
+    values = bias_df.loc[playlist].tolist()
+    values += values[:1]
+    angles = np.linspace(0, 2 * np.pi, len(bias_features), endpoint=False).tolist()
+    angles += angles[:1]
+
+    fig, ax = plt.subplots(figsize=(5, 5), subplot_kw=dict(polar=True))
+    ax.plot(angles, values, linewidth=2)
+    ax.fill(angles, values, alpha=0.25)
+    ax.set_xticks(angles[:-1])
+    ax.set_xticklabels(bias_features)
+    ax.set_ylim(0, 1)
+    ax.set_title(playlist)
+    st.pyplot(fig)
+
+# Optional comparison table
+if st.checkbox("Show comparison table"):
+    st.dataframe(bias_df.round(2))
