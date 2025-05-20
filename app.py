@@ -1453,3 +1453,133 @@ Born around **{year}**, this playlist is a {top_genre.lower()} soul with a {vibe
 Socially, it {social}  
 Hobbies? It {hobby}
 """)
+
+# ─── 🎛 Sonic Identity Dashboard ───
+st.header("🎛 Sonic Identity Dashboard")
+
+combo_playlist = st.selectbox("Select a playlist for deep soul analysis", df['Playlist'].unique(), key="combo_tabbed")
+cdf = df[df['Playlist'] == combo_playlist].copy()
+
+# ─ Common Feature Averages ─
+val = cdf['Valence'].mean() if 'Valence' in cdf else 0.5
+energy = cdf['Energy'].mean() if 'Energy' in cdf else 0.5
+dance = cdf['Danceability'].mean() if 'Danceability' in cdf else 0.5
+acoustic = cdf['Acousticness'].mean() if 'Acousticness' in cdf else 0.5
+speech = cdf['Speechiness'].mean() if 'Speechiness' in cdf else 0.5
+instr = cdf['Instrumentalness'].mean() if 'Instrumentalness' in cdf else 0.3
+pop = cdf['Popularity'].mean() if 'Popularity' in cdf else 50
+tempo_std = cdf['Tempo'].std() if 'Tempo' in cdf else 0
+recent_pct = (cdf['ReleaseDate'] > pd.Timestamp.now() - pd.DateOffset(years=1)).mean() if 'ReleaseDate' in cdf else 0
+
+# Year + Genre
+if 'ReleaseDate' in cdf and not cdf['ReleaseDate'].isna().all():
+    year = int(cdf['ReleaseDate'].dt.year.dropna().mode()[0])
+    decade = (year // 10) * 10
+else:
+    year = 2015
+    decade = 2010
+
+if 'Genres' in cdf.columns:
+    genres = cdf['Genres'].dropna().astype(str).str.split(',').explode().str.strip()
+    top_genre = genres.mode()[0] if not genres.empty else "Indie"
+else:
+    top_genre = "Indie"
+
+# ─ Tabs Start ─
+tab1, tab2, tab3 = st.tabs(["🎭 Persona", "🌌 Birth Chart", "🔮 Zodiac"])
+
+# ─🎭 Persona Tab ─
+with tab1:
+    if val > 0.7 and energy > 0.6:
+        vibe = "confident extrovert who dances like nobody’s watching (and doesn’t care if you are)."
+    elif val < 0.4 and energy < 0.4:
+        vibe = "quiet and introspective, probably journaling under a tree somewhere."
+    elif energy > 0.6:
+        vibe = "fast-talking, hype-driven, a little chaotic but in a fun way."
+    elif val < 0.3:
+        vibe = "low-key heartbroken with great taste."
+    else:
+        vibe = "pretty chill, good with people, but likes alone time too."
+
+    if pop > 70:
+        social = "hangs with the popular crowd but is surprisingly down to earth."
+    elif pop < 30:
+        social = "obscure, misunderstood, possibly lives off-grid and makes killer playlists."
+    else:
+        social = "comfortable in any room, genre-fluid, probably owns a denim jacket with pins."
+
+    if instr > 0.5:
+        hobby = "loves ambient hikes, late-night lo-fi, and probably owns a synth."
+    elif speech > 0.5:
+        hobby = "obsessed with lyrics, wordplay, and makes epic break-up playlists for friends."
+    elif dance > 0.7:
+        hobby = "first on the dance floor, last to leave. Probably DJs house parties."
+    else:
+        hobby = "likes deep cuts, coffee shops, and makes great mixtapes no one else understands."
+
+    st.markdown(f"""
+    **If your playlist were a person…**
+
+    - **Born:** ~{year}  
+    - **Style:** {top_genre} aesthetic  
+    - **Vibe:** {vibe}  
+    - **Social Type:** {social}  
+    - **Hobbies:** {hobby}
+    """)
+
+# ─🌌 Birth Chart Tab ─
+with tab2:
+    if val < 0.35 and energy < 0.4:
+        moon = "🌒 Melancholy Moon – Reflective, deep, and emotional"
+    elif val > 0.65 and energy > 0.6:
+        moon = "🌕 Radiant Moon – Uplifting, bright, and full of joy"
+    elif energy > 0.6:
+        moon = "🌓 Electric Moon – Energetic and expressive"
+    elif val > 0.6:
+        moon = "🌔 Sentimental Moon – Warm, nostalgic, and sweet"
+    else:
+        moon = "🌘 Wandering Moon – Ambiguous, layered, a mystery of moods"
+
+    if decade < 1980:
+        rising = "📼 Retro Rising – Soulful, timeless, vintage vibes"
+    elif decade < 2000:
+        rising = "📻 Analog Rising – Grunge, boom bap, golden age feel"
+    elif decade < 2015:
+        rising = "🎧 Millennial Rising – Alt, indie, bloghouse and big feelings"
+    else:
+        rising = "📲 Digital Rising – Fresh, experimental, TikTok-core"
+
+    st.markdown(f"""
+    **🌌 Playlist Birth Chart**
+
+    - ☀️ **Sun Sign (Core Genre):** {top_genre}  
+    - 🌙 **Moon Sign (Mood):** {moon}  
+    - 🌅 **Rising Sign (Decade/Era):** {rising}
+    """)
+
+# ─🔮 Zodiac Tab ─
+with tab3:
+    if val > 0.65 and energy > 0.6:
+        zodiac = "🔥 Solar Flare – Radiant, confident, and alive"
+    elif val < 0.35 and energy < 0.4:
+        zodiac = "🌊 Lunar Drifter – Emotional, floaty, introspective"
+    elif tempo_std > 30:
+        zodiac = "🌪 Stormchild – Chaotic, intense, unpredictable"
+    elif dance > 0.7 and val > 0.55:
+        zodiac = "🌈 Joybringer – Danceable, bright, carefree"
+    elif acoustic > 0.5 and speech < 0.4:
+        zodiac = "🧊 Glassmind – Minimalist and deep-thinking"
+    elif val < 0.3 and pop < 50:
+        zodiac = "🕳 Voidwalker – Obscure, moody, underground"
+    elif decade < 2000:
+        zodiac = "🐉 Ancient Pulse – Rooted in past eras"
+    elif recent_pct > 0.5:
+        zodiac = "🚀 Futurebender – Forward-thinking, fresh"
+    else:
+        zodiac = "🌀 Fringe Oracle – Genre-resistant, beautifully weird"
+
+    st.markdown(f"""
+    **🔮 Your Playlist's Music Zodiac**
+
+    - **Zodiac Sign:** {zodiac}
+    """)
