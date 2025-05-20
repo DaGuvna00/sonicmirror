@@ -1144,14 +1144,14 @@ st.pyplot(fig_bar)
 
 
     # ─ Custom Threshold Sliders ─
-    with st.expander("🎛 Fine-tune MBTI Thresholds"):
-        energy_thresh = st.slider("Extroversion (Energy)", 0.3, 0.9, 0.55)
-        speech_thresh = st.slider("Extroversion (Speechiness)", 0.2, 0.7, 0.4)
-        instr_thresh = st.slider("Intuition (Instrumentalness)", 0.1, 0.8, 0.3)
-        acoustic_thresh = st.slider("Intuition (Acousticness)", 0.3, 0.9, 0.5)
-        valence_thresh = st.slider("Feeling (Valence)", 0.3, 0.7, 0.5)
-        tempo_std_thresh = st.slider("Perceiving (Tempo Std Dev)", 5, 40, 15)
-        lag_std_thresh = st.slider("Perceiving (Lag Std Dev)", 30, 150, 100)
+ with st.expander("🎛 Fine-tune MBTI Thresholds"):
+    energy_thresh = st.slider("Extroversion (Energy)", 0.3, 0.9, 0.55)
+    speech_thresh = st.slider("Extroversion (Speechiness)", 0.2, 0.7, 0.4)
+    instr_thresh = st.slider("Intuition (Instrumentalness)", 0.1, 0.8, 0.3)
+    acoustic_thresh = st.slider("Intuition (Acousticness)", 0.3, 0.9, 0.5)
+    valence_thresh = st.slider("Feeling (Valence)", 0.3, 0.7, 0.5)
+    tempo_std_thresh = st.slider("Perceiving (Tempo Std Dev)", 5, 40, 15)
+    lag_std_thresh = st.slider("Perceiving (Lag Std Dev)", 30, 150, 100)
 
     # ─ MBTI Logic ─
     ie = "E" if avg['Energy'] > energy_thresh or avg['Speechiness'] > speech_thresh else "I"
