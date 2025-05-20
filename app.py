@@ -99,35 +99,50 @@ ax2.set_ylabel('Track Count')
 ax2.legend()
 st.pyplot(fig2)
 
-# ─── 🌈 Playlist Mood Ring ───
+# ─── Playlist Mood Ring Comparison ───
 st.header("🌈 Playlist Mood Ring")
 
-mood_features = ['Valence', 'Energy', 'Danceability', 'Acousticness', 'Liveness']
-available_playlists = df['Playlist'].unique().tolist()
-selected_mood_playlist = st.selectbox("Select Playlist", available_playlists, key="mood_playlist")
+# Dropdowns to select playlists
+p1 = st.selectbox("Select Playlist 1", df['Playlist'].unique(), key="mood1")
+p2 = st.selectbox("Select Playlist 2", df['Playlist'].unique(), key="mood2")
 
-# Filter and average mood data
-mood_df = df[df['Playlist'] == selected_mood_playlist]
-if not mood_df.empty and all(f in mood_df.columns for f in mood_features):
-    avg_vals = mood_df[mood_features].mean()
+# Define features and corresponding emojis
+mood_features = ['Energy', 'Valence', 'Danceability', 'Liveness', 'Speechiness', 'Acousticness']
+mood_emojis = {
+    'Energy': '⚡', 'Valence': '😊', 'Danceability': '🕺',
+    'Liveness': '🎤', 'Speechiness': '🗣️', 'Acousticness': '🌿'
+}
 
-    labels = mood_features
-    values = avg_vals.tolist()
-    values += values[:1]  # duplicate first value for full loop
-    angles = np.linspace(0, 2 * np.pi, len(labels), endpoint=False).tolist()
-    angles += angles[:1]  # same for angles
+if p1 and p2:
+    angles = np.linspace(0, 2 * np.pi, len(mood_features), endpoint=False).tolist()
+    angles += angles[:1]
 
+    # Compute averages and close the radar loop
+    avg1 = df[df['Playlist'] == p1][mood_features].mean().tolist()
+    avg2 = df[df['Playlist'] == p2][mood_features].mean().tolist()
+    avg1 += avg1[:1]
+    avg2 += avg2[:1]
 
+    # Determine dominant feature for emoji
+    dominant_idx = np.argmax(df[df['Playlist'] == p1][mood_features].mean())
+    emoji = mood_emojis[mood_features[dominant_idx]]
+
+    # Radar plot
     fig_mood, ax_mood = plt.subplots(figsize=(6, 6), subplot_kw=dict(polar=True))
-    ax_mood.plot(angles, values, color='mediumorchid', linewidth=2)
-    ax_mood.fill(angles, values, color='orchid', alpha=0.4)
+    ax_mood.plot(angles, avg1, color='orchid', linewidth=2, label=p1)
+    ax_mood.fill(angles, avg1, color='orchid', alpha=0.3)
+    ax_mood.plot(angles, avg2, color='darkorange', linewidth=2, label=p2)
+    ax_mood.fill(angles, avg2, color='darkorange', alpha=0.3)
     ax_mood.set_xticks(angles[:-1])
     ax_mood.set_xticklabels(mood_features)
-    ax_mood.set_yticklabels([])
-    ax_mood.set_title(f"Mood Ring: {selected_mood_playlist}")
+    ax_mood.set_title("🎭 Audio Mood Radar")
+
+    # Add center emoji
+    ax_mood.text(0, 0, emoji, fontsize=38, ha='center', va='center')
+
+    ax_mood.legend(loc='upper right', bbox_to_anchor=(1.3, 1.1))
     st.pyplot(fig_mood)
-else:
-    st.warning("Not enough data to generate a mood ring for this playlist.")
+
 
 
 # ─── Overlap & Unique Tracks ───
