@@ -351,26 +351,42 @@ if 'Playlist' in df.columns and 'AddedAt' in df.columns and 'ReleaseDate' in df.
 else:
     st.warning("Missing Playlist, AddedAt, or ReleaseDate columns.")
 
-# ─── 🥧 Genre Spread Pie Chart ───
+# ─── 🥧 Genre Spread Pie Chart (Single or All Playlists) ───
 st.header("🥧 Genre Spread")
 
 if 'Genres' in df.columns and 'Playlist' in df.columns:
-    playlist_for_genres = st.selectbox("Select Playlist for Genre Breakdown", df['Playlist'].unique())
 
-    genre_df = df[df['Playlist'] == playlist_for_genres].copy()
+    all_playlists = df['Playlist'].unique().tolist()
+    playlist_options = ["All Playlists Combined"] + all_playlists
+    selected_playlist = st.selectbox("Select Playlist for Genre Breakdown", playlist_options)
+
+    if selected_playlist == "All Playlists Combined":
+        genre_df = df.copy()
+    else:
+        genre_df = df[df['Playlist'] == selected_playlist].copy()
+
+    # Ensure clean genres
     genre_df['Genres'] = genre_df['Genres'].dropna().astype(str)
-
-    # Split multi-genre entries and flatten
     genre_series = genre_df['Genres'].str.split(',').explode().str.strip()
+
+    # Get top genres
     top_genres = genre_series.value_counts().head(10)
 
-    fig_genre, ax_genre = plt.subplots()
-    ax_genre.pie(top_genres.values, labels=top_genres.index, autopct='%1.1f%%', startangle=140, counterclock=False)
-    ax_genre.set_title(f"Top Genres in '{playlist_for_genres}'")
-    st.pyplot(fig_genre)
+    if not top_genres.empty:
+        fig_genre, ax_genre = plt.subplots()
+        ax_genre.pie(top_genres.values,
+                     labels=top_genres.index,
+                     autopct='%1.1f%%',
+                     startangle=140,
+                     counterclock=False)
+        chart_title = "Top Genres Across All Playlists" if selected_playlist == "All Playlists Combined" else f"Top Genres in '{selected_playlist}'"
+        ax_genre.set_title(chart_title)
+        st.pyplot(fig_genre)
+    else:
+        st.info("No genre data found in this playlist.")
 
 else:
-    st.warning("Missing 'Genres' or 'Playlist' column in the dataset.")
+    st.warning("Missing 'Genres' or 'Playlist' column in your data.")
 
 
 
