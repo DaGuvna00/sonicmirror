@@ -1370,7 +1370,8 @@ else:
     top_genre = "Indie"
 
 # ─ Tabs Start ─
-tab1, tab2, tab3 = st.tabs(["🎭 Persona", "🌌 Birth Chart", "🔮 Zodiac"])
+tab1, tab2, tab3, tab4 = st.tabs(["🎭 Persona", "🌌 Birth Chart", "🔮 Zodiac", "🜁 Elemental"])
+
 
 # ─🎭 Persona Tab ─
 with tab1:
@@ -1461,6 +1462,53 @@ with tab3:
         zodiac = "🚀 Futurebender – Forward-thinking, fresh"
     else:
         zodiac = "🌀 Fringe Oracle – Genre-resistant, beautifully weird"
+
+with tab4:
+    # Pull features
+    v = cdf['Valence'].mean() if 'Valence' in cdf else 0.5
+    e = cdf['Energy'].mean() if 'Energy' in cdf else 0.5
+    l = cdf['Loudness'].mean() if 'Loudness' in cdf else -10
+    a = cdf['Acousticness'].mean() if 'Acousticness' in cdf else 0.5
+    i = cdf['Instrumentalness'].mean() if 'Instrumentalness' in cdf else 0.3
+    s = cdf['Speechiness'].mean() if 'Speechiness' in cdf else 0.5
+    t_std = cdf['Tempo'].std() if 'Tempo' in cdf else 10
+    d = cdf['Danceability'].mean() if 'Danceability' in cdf else 0.5
+
+    # Normalize loudness
+    l = (l + 60) / 60  # map -60 to 0 dB → 0 to 1
+
+    # Score each element
+    fire = (e + v + l) / 3
+    water = (1 - e + 1 - v + a) / 3
+    air = (s + d + min(t_std / 50, 1)) / 3
+    earth = (a + i + (1 - l)) / 3
+
+    elements = {
+        "🔥 Fire": round(fire, 3),
+        "🌊 Water": round(water, 3),
+        "🌪 Air": round(air, 3),
+        "🌱 Earth": round(earth, 3)
+    }
+
+    dominant = max(elements.items(), key=lambda x: x[1])
+
+    st.markdown(f"### 🌟 Dominant Element: {dominant[0]}")
+    st.markdown({
+        "🔥 Fire": "Passionate, expressive, bold. Your playlist kicks down the door.",
+        "🌊 Water": "Deep, emotional, immersive. A sonic ocean for soft souls.",
+        "🌪 Air": "Clever, quick, curious. A cerebral storm of rhythm and wit.",
+        "🌱 Earth": "Grounded, organic, meditative. Built from roots and raw sound."
+    }[dominant[0]])
+
+    if st.checkbox("Show full elemental balance", key="elemental_balance_chart"):
+        import matplotlib.pyplot as plt
+
+        fig, ax = plt.subplots()
+        ax.barh(list(elements.keys())[::-1], list(elements.values())[::-1], color=["orangered", "deepskyblue", "mediumslateblue", "seagreen"])
+        ax.set_xlim(0, 1)
+        ax.set_xlabel("Elemental Strength")
+        ax.set_title("Elemental Breakdown of Playlist")
+        st.pyplot(fig)
 
     st.markdown(f"""
     **🔮 Your Playlist's Music Zodiac**
