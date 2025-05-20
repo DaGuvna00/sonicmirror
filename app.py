@@ -19,7 +19,7 @@ uploaded_files = st.sidebar.file_uploader(
     accept_multiple_files=True
 )
 
-    playlists = []
+playlists = []
     for f in uploaded_files:
         name = f.name.rsplit('.', 1)[0]
         df = None
