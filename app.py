@@ -1212,3 +1212,61 @@ if all(f in df.columns for f in mbti_features):
 
 else:
     st.warning("Not enough audio feature data to compute MBTI type.")
+
+# ─── 🧠 Cognitive Bias Analyzer ───
+st.header("🧠 Cognitive Bias Analyzer")
+
+bias_messages = []
+
+# ─ Recency Bias ─
+if 'ReleaseDate' in df.columns:
+    recent_threshold = pd.Timestamp.now() - pd.DateOffset(years=1)
+    recent_pct = (df['ReleaseDate'] > recent_threshold).mean()
+    if recent_pct > 0.5:
+        bias_messages.append(f"🆕 **Recency Bias** – {int(recent_pct*100)}% of your tracks were released in the last year. You're chasing the new.")
+
+# ─ Nostalgia Bias ─
+if 'ReleaseDate' in df.columns:
+    decades = df['ReleaseDate'].dt.year.dropna().dropna().floordiv(10) * 10
+    if not decades.empty:
+        top_decade = decades.mode()[0]
+        top_decade_pct = (decades == top_decade).mean()
+        if top_decade_pct > 0.4:
+            bias_messages.append(f"📼 **Nostalgia Bias** – {int(top_decade_pct*100)}% of your tracks are from the {top_decade}s. Stuck in a beautiful time loop?")
+
+# ─ Confirmation Bias ─
+if 'Genres' in df.columns:
+    genre_series = df['Genres'].dropna().astype(str).str.split(',').explode().str.strip()
+    top_genre_pct = genre_series.value_counts(normalize=True).iloc[0] if not genre_series.empty else 0
+    if top_genre_pct > 0.4:
+        bias_messages.append(f"🧠 **Confirmation Bias** – {int(top_genre_pct*100)}% of your tracks share a single dominant genre. Comfortable much?")
+
+# ─ Novelty Aversion ─
+if 'Artist' in df.columns:
+    artist_counts = df['Artist'].dropna().astype(str).value_counts()
+    new_artists_pct = (artist_counts == 1).mean()
+    if new_artists_pct < 0.4:
+        bias_messages.append(f"😌 **Novelty Aversion** – Only {int(new_artists_pct*100)}% of artists appear once. You like who you like.")
+
+# ─ Emotional Looping ─
+if all(c in df.columns for c in ['Valence', 'Energy']):
+    avg_val = df['Valence'].mean()
+    avg_energy = df['Energy'].mean()
+    if avg_val < 0.35 and avg_energy < 0.5:
+        bias_messages.append(f"💔 **Emotional Looping** – Your vibe leans sad + chill. Do the tears taste like reverb?")
+    elif avg_val > 0.65 and avg_energy > 0.6:
+        bias_messages.append(f"🔥 **Emotional Looping** – You keep it hype and happy. Ride or die with the dopamine.")
+
+# ─ Herd Bias ─
+if 'Popularity' in df.columns:
+    avg_popularity = df['Popularity'].dropna().mean()
+    if avg_popularity > 70:
+        bias_messages.append(f"👥 **Herd Bias** – Your average popularity is {avg_popularity:.0f}. You’re vibing with the masses.")
+
+# ─ Results ─
+if bias_messages:
+    st.subheader("🪞 You Might Be Under the Influence Of:")
+    for msg in bias_messages:
+        st.markdown(f"- {msg}")
+else:
+    st.success("🎯 You're a musical free spirit — no obvious cognitive biases detected.")
