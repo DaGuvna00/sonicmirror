@@ -99,6 +99,35 @@ ax2.set_ylabel('Track Count')
 ax2.legend()
 st.pyplot(fig2)
 
+# ─── 🌈 Playlist Mood Ring ───
+st.header("🌈 Playlist Mood Ring")
+
+mood_features = ['Valence', 'Energy', 'Danceability', 'Acousticness', 'Liveness']
+available_playlists = df['Playlist'].unique().tolist()
+selected_mood_playlist = st.selectbox("Select Playlist", available_playlists, key="mood_playlist")
+
+# Filter and average mood data
+mood_df = df[df['Playlist'] == selected_mood_playlist]
+if not mood_df.empty and all(f in mood_df.columns for f in mood_features):
+    avg_vals = mood_df[mood_features].mean()
+
+    labels = mood_features + [mood_features[0]]
+    values = avg_vals.tolist() + [avg_vals.tolist()[0]]
+    angles = np.linspace(0, 2 * np.pi, len(labels), endpoint=False).tolist()
+    angles += angles[:1]
+
+    fig_mood, ax_mood = plt.subplots(figsize=(6, 6), subplot_kw=dict(polar=True))
+    ax_mood.plot(angles, values, color='mediumorchid', linewidth=2)
+    ax_mood.fill(angles, values, color='orchid', alpha=0.4)
+    ax_mood.set_xticks(angles[:-1])
+    ax_mood.set_xticklabels(mood_features)
+    ax_mood.set_yticklabels([])
+    ax_mood.set_title(f"Mood Ring: {selected_mood_playlist}")
+    st.pyplot(fig_mood)
+else:
+    st.warning("Not enough data to generate a mood ring for this playlist.")
+
+
 # ─── Overlap & Unique Tracks ───
 st.header("🔗 Playlist Overlap & Unique")
 sets = {p: set(df[df['Playlist']==p]['Track']) for p in selected}
