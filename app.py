@@ -1463,7 +1463,7 @@ with tab3:
     else:
         zodiac = "🌀 Fringe Oracle – Genre-resistant, beautifully weird"
         
- st.markdown(f"""
+    st.markdown(f"""
     **🔮 Your Playlist's Music Zodiac**
 
     - **Zodiac Sign:** {zodiac}
