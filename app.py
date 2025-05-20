@@ -1076,35 +1076,44 @@ if 'Artist' in df.columns:
 else:
     st.warning("Missing 'Artist' column in your data.")
 
-# ─── 🧠 Playlist Personality Types ───
+# ─── 🧠 Expanded Playlist Personality Engine ───
 st.header("🧠 Playlist Personality Profile")
 
 features = ['Energy', 'Valence', 'Danceability', 'Acousticness', 'Speechiness', 'Loudness']
+
 if 'Playlist' in df.columns and all(f in df.columns for f in features):
     selected_playlist = st.selectbox("Select a playlist to analyze", df['Playlist'].unique(), key="personality")
 
-    # Compute averages
     avg = df[df['Playlist'] == selected_playlist][features].mean()
 
-    # Define rules
-    personality = ""
-    if avg['Energy'] > 0.7 and avg['Danceability'] > 0.7:
-        personality = "🎉 The Party Starter – High energy, danceable, and fun!"
-    elif avg['Acousticness'] > 0.6 and avg['Valence'] < 0.4:
-        personality = "🌧 The Moody Introvert – Soft, sad, and introspective."
-    elif avg['Valence'] > 0.7 and avg['Energy'] > 0.6:
-        personality = "😎 The Good Vibes Only – Bright, upbeat, feel-good anthems."
-    elif avg['Speechiness'] > 0.5 and avg['Energy'] > 0.5:
-        personality = "🎤 The Lyrical Firestorm – Wordy, expressive, and confident."
-    elif avg['Acousticness'] > 0.7 and avg['Danceability'] < 0.4:
-        personality = "🧘‍♂️ The Wallflower – Calm, unplugged, and thoughtful."
-    else:
-        personality = "🌀 The Eclectic – A mix of moods, styles, and surprises."
+    # Define more granular rules
+    personality = "🌀 The Eclectic – A blend of moods, unpredictable but fun."
 
-    # Display
+    if avg['Valence'] > 0.7 and avg['Energy'] > 0.7 and avg['Danceability'] > 0.7:
+        personality = "🎉 The Party Starter – Pure joy, volume up, body moving!"
+    elif avg['Valence'] > 0.7 and avg['Acousticness'] > 0.6:
+        personality = "🌅 The Sunset Rider – Warm, nostalgic, and low-key romantic."
+    elif avg['Valence'] < 0.3 and avg['Acousticness'] > 0.5:
+        personality = "💔 The Heartbreaker – Sad songs for soft souls."
+    elif avg['Energy'] > 0.8 and avg['Speechiness'] > 0.5:
+        personality = "🎤 The Mic Dropper – Confident, expressive, and lyrically fire."
+    elif avg['Acousticness'] > 0.75 and avg['Loudness'] < -10:
+        personality = "🧘 The Minimalist – Quiet, introspective, unplugged."
+    elif avg['Danceability'] > 0.7 and avg['Valence'] < 0.4:
+        personality = "🕶️ The Cool Customer – Groovy but emotionally reserved."
+    elif avg['Loudness'] > -5 and avg['Energy'] > 0.6 and avg['Speechiness'] < 0.3:
+        personality = "⚡ The Wild One – Loud, fast, and full throttle."
+    elif avg['Energy'] < 0.4 and avg['Valence'] < 0.4 and avg['Acousticness'] > 0.6:
+        personality = "🌧 The Moody Introvert – Introspective and emotionally deep."
+    elif avg['Energy'] < 0.3 and avg['Valence'] > 0.7:
+        personality = "🦋 The Gentle Optimist – Soft, bright, and hopeful."
+    elif avg['Danceability'] > 0.5 and avg['Speechiness'] > 0.6:
+        personality = "🎙️ The Open Mic Regular – Wordy, clever, and expressive."
+
+    # Show result
     st.subheader(f"Personality of '{selected_playlist}'")
     st.markdown(f"**{personality}**")
     st.write("📊 Feature Profile:")
     st.dataframe(avg.round(3).to_frame("Average Value"))
 else:
-    st.warning("Missing necessary columns for personality analysis.")
+    st.warning("Missing required audio features.")
