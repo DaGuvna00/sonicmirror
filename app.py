@@ -1118,7 +1118,7 @@ if 'Playlist' in df.columns and all(f in df.columns for f in features):
 else:
     st.warning("Missing required audio features.")
 
-# ─── 🧠 MBTI Playlist Personality Mapper ───
+# ─── 🧬 MBTI Personality Match with Visualization ───
 st.header("🧬 MBTI Personality Match")
 
 mbti_features = ['Energy', 'Valence', 'Danceability', 'Acousticness', 'Instrumentalness', 'Speechiness', 'Tempo', 'LagDays']
@@ -1127,44 +1127,67 @@ if all(f in df.columns for f in mbti_features):
     mbti_playlist = st.selectbox("Select a playlist for MBTI profiling", df['Playlist'].unique(), key="mbti_select")
     avg = df[df['Playlist'] == mbti_playlist][mbti_features].mean()
 
-    # ─ MBTI Axis Scoring ─
-    # You can tweak these thresholds for better tuning later
+    st.subheader("📊 Feature Radar Profile")
+    # Radar Plot
+    import math
+    angles = np.linspace(0, 2 * math.pi, len(mbti_features), endpoint=False).tolist()
+    values = avg.tolist()
+    angles += angles[:1]
+    values += values[:1]
 
-    # I vs E (Introvert/Extrovert)
-    ie = "E" if avg['Energy'] > 0.55 or avg['Speechiness'] > 0.4 else "I"
+    fig_radar, ax = plt.subplots(figsize=(6, 6), subplot_kw=dict(polar=True))
+    ax.plot(angles, values, linewidth=2)
+    ax.fill(angles, values, alpha=0.25)
+    ax.set_xticks(angles[:-1])
+    ax.set_xticklabels(mbti_features)
+    ax.set_title("Feature Radar", fontsize=14)
+    st.pyplot(fig_radar)
 
-    # N vs S (iNtuitive/Sensing)
-    ns = "N" if avg['Instrumentalness'] > 0.3 or avg['Acousticness'] > 0.5 else "S"
+    st.subheader("🎛 Customize MBTI Thresholds")
+    # Threshold sliders (can be used to adjust logic)
+    energy_thresh = st.slider("Extroversion Threshold (Energy)", 0.3, 0.8, 0.55)
+    speech_thresh = st.slider("Extroversion Threshold (Speechiness)", 0.2, 0.7, 0.4)
+    instr_thresh = st.slider("Intuition Threshold (Instrumentalness)", 0.1, 0.6, 0.3)
+    acoustic_thresh = st.slider("Intuition Threshold (Acousticness)", 0.3, 0.7, 0.5)
+    valence_thresh = st.slider("Feeling Threshold (Valence)", 0.3, 0.7, 0.5)
+    tempo_std_thresh = st.slider("Perceiving Threshold (Tempo Std Dev)", 5, 40, 15)
+    lag_std_thresh = st.slider("Perceiving Threshold (Lag Std Dev)", 30, 150, 100)
 
-    # T vs F (Thinking/Feeling)
-    tf = "F" if avg['Valence'] > 0.5 else "T"
+    # MBTI Axis Scoring with dynamic thresholds
+    ie = "E" if avg['Energy'] > energy_thresh or avg['Speechiness'] > speech_thresh else "I"
+    ns = "N" if avg['Instrumentalness'] > instr_thresh or avg['Acousticness'] > acoustic_thresh else "S"
+    tf = "F" if avg['Valence'] > valence_thresh else "T"
 
-    # J vs P (Judging/Perceiving)
-    variability = df[df['Playlist'] == mbti_playlist]['Tempo'].std()
-    lag_variance = df[df['Playlist'] == mbti_playlist]['LagDays'].std()
-    jp = "P" if variability > 15 or lag_variance > 100 else "J"
+    tempo_std = df[df['Playlist'] == mbti_playlist]['Tempo'].std()
+    lag_std = df[df['Playlist'] == mbti_playlist]['LagDays'].std()
+    jp = "P" if tempo_std > tempo_std_thresh or lag_std > lag_std_thresh else "J"
 
     mbti = ie + ns + tf + jp
 
-    # ─ Descriptions ─
+    # Descriptions
     mbti_profiles = {
         "ENFP": "🎉 **The Sonic Adventurer** – Your playlist bursts with color, movement, and contradictions. It's a road trip with no map, windows down, chasing soundwaves.",
         "INTJ": "🧠 **The Sonic Architect** – Meticulous, brooding, structured. Your playlist is a cathedral of sound: cold steel and stained glass synths.",
+        "ISFJ": "🌿 **The Nostalgic Soul** – Gentle, familiar, and comforting. Your music is the audio version of vintage Polaroids and slow Sunday mornings.",
+        "ENTP": "⚡ **The Idea Storm** – Chaotic good energy. You're genre-fluid, tempo-erratic, and always seeking the next sonic rabbit hole.",
+        "INFP": "🌌 **The Dream Weaver** – Emotional depth, acoustic resonance, and a taste for the sublime. Each song is a diary entry you forgot you wrote.",
         "ISTP": "😎 **The Chill Tinkerer** – Minimalist, groovy, no-nonsense. You like tracks that feel like a shrug in slow motion.",
         "ESFJ": "❤️ **The Harmonizer** – Warmth and community. These songs feel like hugs, sing-alongs, and the golden hour on a weekend.",
-        "INFP": "🌌 **The Dream Weaver** – Emotional depth, acoustic resonance, and a taste for the sublime. Each song is a diary entry you forgot you wrote.",
-        "ENTP": "⚡ **The Idea Storm** – Chaotic good energy. You're genre-fluid, tempo-erratic, and always seeking the next sonic rabbit hole.",
-        "ISFJ": "🌿 **The Nostalgic Soul** – Gentle, familiar, and comforting. Your music is the audio version of vintage Polaroids and slow Sunday mornings.",
         "ESTP": "🔥 **The Night Burner** – Fast beats, hard drops, zero apologies. Your playlist could DJ an underground warehouse rave at 3am.",
-        # Add more if you want...
     }
 
     desc = mbti_profiles.get(mbti, f"🌀 **The Enigma ({mbti})** – Your playlist defies all boxes. Even this one.")
 
-    # ─ Output ─
+    # Show results
     st.subheader(f"🧬 Your Playlist MBTI Type: `{mbti}`")
     st.markdown(desc)
-    st.markdown("**Feature Averages Used:**")
-    st.dataframe(avg.round(3).to_frame("Average Value"))
+
+    with st.expander("📖 Why this MBTI type?"):
+        st.markdown(f"""
+        - **Introvert (I) vs Extrovert (E)** → Energy = {avg['Energy']:.2f}, Speechiness = {avg['Speechiness']:.2f}
+        - **Intuition (N) vs Sensing (S)** → Instrumentalness = {avg['Instrumentalness']:.2f}, Acousticness = {avg['Acousticness']:.2f}
+        - **Thinking (T) vs Feeling (F)** → Valence = {avg['Valence']:.2f}
+        - **Judging (J) vs Perceiving (P)** → Tempo Std Dev = {tempo_std:.1f}, Lag Std Dev = {lag_std:.1f}
+        """)
 else:
-    st.warning("Missing required features for MBTI mapping.")
+    st.warning("Missing required features for MBTI profiling.")
