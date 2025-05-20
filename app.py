@@ -976,3 +976,39 @@ else:
     else:
         st.info("No valid mood data found in the playlist.")
 
+# ─── 📆 Release Year vs Duration ───
+st.header("📆 Track Duration Over Time")
+
+# Make sure necessary columns are present
+if 'ReleaseDate' in df.columns and 'Duration (ms)' in df.columns:
+
+    df['ReleaseDate'] = pd.to_datetime(df['ReleaseDate'], errors='coerce')
+    df['ReleaseYear'] = df['ReleaseDate'].dt.year
+    df = df[df['Duration (ms)'] > 0]
+    df['Duration (min)'] = df['Duration (ms)'] / 60000
+
+    filtered = df.dropna(subset=['ReleaseYear', 'Duration (min)'])
+
+    if not filtered.empty:
+        fig, ax = plt.subplots(figsize=(10, 6))
+        sns.scatterplot(
+            data=filtered,
+            x='ReleaseYear',
+            y='Duration (min)',
+            hue='Duration (min)',
+            palette='viridis',
+            legend=False,
+            alpha=0.7,
+            ax=ax
+        )
+
+        ax.set_title("Track Duration vs. Release Year", fontsize=16, weight='bold')
+        ax.set_xlabel("Release Year")
+        ax.set_ylabel("Duration (minutes)")
+        ax.grid(True, linestyle='--', alpha=0.3)
+
+        st.pyplot(fig)
+    else:
+        st.info("No valid release year or duration data available.")
+else:
+    st.warning("This feature requires both 'ReleaseDate' and 'Duration (ms)' columns.")
