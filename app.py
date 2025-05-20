@@ -10,7 +10,8 @@ import seaborn as sns
 st.set_page_config(page_title="SonicMirror Exportify Analyzer", layout="wide")
 st.title("🎶 SonicMirror – Exportify Playlist Analyzer")
 
-# ─── File Upload ───
+
+# ─── Upload and Parse Exportify Files ───
 st.sidebar.header("📂 Upload Exportify Exports")
 
 uploaded_files = st.sidebar.file_uploader(
@@ -21,21 +22,24 @@ uploaded_files = st.sidebar.file_uploader(
 
 if uploaded_files:
     playlists = []
+
     for f in uploaded_files:
         name = f.name.rsplit('.', 1)[0]
         df = None
 
         try:
+            # Try reading CSV or Excel
             if f.name.lower().endswith('.csv'):
                 df = pd.read_csv(f, encoding='utf-8')
             else:
                 sheets = pd.read_excel(f, sheet_name=None)
                 df = pd.concat(sheets.values(), ignore_index=True)
 
-            # Ensure we actually got columns
-            if df.shape[1] < 2:
+            # Skip if file is structurally broken
+            if df.empty or df.shape[1] < 2:
                 continue
 
+            # Normalize Exportify headers
             df = df.rename(columns={
                 'Artist Name(s)': 'Artist',
                 'Track Name': 'Track',
@@ -47,49 +51,19 @@ if uploaded_files:
             playlists.append(df)
 
         except Exception:
-            continue  # fail silently and move on
+            continue  # Skip unreadable file silently
 
+    # Final check: no usable files
     if not playlists:
         st.error("No valid files uploaded. Please check your Exportify export format.")
         st.stop()
 
     data = pd.concat(playlists, ignore_index=True)
+
 else:
     st.info("📥 Upload at least one Exportify file to begin analysis.")
     st.stop()
 
-
-
-# ─── Parse and Combine CSVs/Excels ───
-if uploaded_files:
-    playlists = []
-    for f in uploaded_files:
-        name = f.name.rsplit('.',1)[0]
-        try:
-            if f.name.lower().endswith('.csv'):
-                df = pd.read_csv(f)
-            else:
-                sheets = pd.read_excel(f, sheet_name=None)
-                df = pd.concat(sheets.values(), ignore_index=True)
-        except Exception as e:
-            st.sidebar.error(f"Error reading {f.name}: {e}")
-            continue
-        # Normalize Exportify columns
-        df = df.rename(columns={
-            'Artist Name(s)': 'Artist',
-            'Track Name': 'Track',
-            'Added At': 'AddedAt',
-            'Release Date': 'ReleaseDate'
-        })
-        df['Playlist'] = name
-        playlists.append(df)
-    if not playlists:
-        st.error("No valid files uploaded. Please check your Exportify export format.")
-        st.stop()
-    data = pd.concat(playlists, ignore_index=True)
-else:
-    st.info("📥 Upload at least one Exportify file to begin analysis.")
-    st.stop()
 
 # ─── Sidebar Controls ───
 st.sidebar.header("🔎 Analysis Options")
