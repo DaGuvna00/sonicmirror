@@ -11,7 +11,14 @@ st.set_page_config(page_title="SonicMirror Exportify Analyzer", layout="wide")
 st.title("🎶 SonicMirror – Exportify Playlist Analyzer")
 
 # ─── File Upload ───
-st.sidebar.header("📂 Upload Exportify Exports")if uploaded_files:
+st.sidebar.header("📂 Upload Exportify Exports")
+
+uploaded_files = st.sidebar.file_uploader(
+    "Select one or more Exportify CSV/Excel files",
+    type=["csv", "xls", "xlsx"],
+    accept_multiple_files=True
+)
+
     playlists = []
     for f in uploaded_files:
         name = f.name.rsplit('.', 1)[0]
