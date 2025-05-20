@@ -87,6 +87,7 @@ ax.set_ylabel(feat)
 ax.set_title(f"Average {feat} by Playlist")
 st.pyplot(fig)
 
+st.write("Columns in your data:", df.columns.tolist())
 
 # ─── Discovery Lag Distribution ───
 st.header("⏱ Discovery Lag Distribution")
