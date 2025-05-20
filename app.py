@@ -20,33 +20,33 @@ uploaded_files = st.sidebar.file_uploader(
 )
 
 playlists = []
-    for f in uploaded_files:
-        name = f.name.rsplit('.', 1)[0]
-        df = None
-        try:
-            if f.name.lower().endswith('.csv'):
-                df = pd.read_csv(f)
-            else:
-                sheets = pd.read_excel(f, sheet_name=None)
-                df = pd.concat(sheets.values(), ignore_index=True)
+for f in uploaded_files:
+    name = f.name.rsplit('.', 1)[0]
+    df = None
+    try:
+        if f.name.lower().endswith('.csv'):
+            df = pd.read_csv(f)
+        else:
+            sheets = pd.read_excel(f, sheet_name=None)
+            df = pd.concat(sheets.values(), ignore_index=True)
 
-            # Standardize column names
-            df = df.rename(columns={
-                'Artist Name(s)': 'Artist',
-                'Track Name': 'Track',
-                'Added At': 'AddedAt',
-                'Release Date': 'ReleaseDate'
-            })
+        # Standardize column names
+        df = df.rename(columns={
+            'Artist Name(s)': 'Artist',
+            'Track Name': 'Track',
+            'Added At': 'AddedAt',
+            'Release Date': 'ReleaseDate'
+        })
 
-            df['Playlist'] = name
-            playlists.append(df)
+        df['Playlist'] = name
+        playlists.append(df)
 
-        except Exception:
-            pass  # fail silently
+    except Exception:
+        pass  # fail silently
 
-    if not playlists:
-        st.stop()  # Stop app if nothing parsed
-    data = pd.concat(playlists, ignore_index=True)
+if not playlists:
+    st.stop()  # Stop app if nothing parsed
+data = pd.concat(playlists, ignore_index=True)
 else:
     st.stop()  # Stop if nothing uploaded
 
