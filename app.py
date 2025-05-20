@@ -1193,5 +1193,5 @@ with st.expander("🎛 Fine-tune MBTI Thresholds"):
         - **Judging (J) vs Perceiving (P)** → Tempo Std Dev: `{tempo_std:.1f}`, Lag Std Dev: `{lag_std:.1f}`
         """)
         st.caption("You can adjust thresholds above to reflect different interpretations of your musical personality.")
-else:
+    else:
     st.warning("Not enough audio feature data to compute MBTI type.")
