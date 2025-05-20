@@ -301,6 +301,32 @@ if track_col and artist_col:
 else:
     st.warning("Missing 'Track' or 'Artist' column in your data.")
 
+# ─── Feature Timeline Explorer ───
+st.header("📈 Feature Timeline Explorer")
+
+# Choose playlist and feature
+feature_options = ['Energy', 'Valence', 'Danceability', 'Acousticness', 'Instrumentalness', 'Speechiness', 'Loudness']
+if 'Playlist' in df.columns and 'AddedAt' in df.columns:
+    playlist_choice = st.selectbox("Select Playlist", df['Playlist'].unique())
+    feature_choice = st.selectbox("Select Audio Feature", feature_options)
+
+    subset = df[df['Playlist'] == playlist_choice].copy()
+    subset['AddedAt'] = pd.to_datetime(subset['AddedAt'], errors='coerce')
+
+    # Filter and sort
+    subset = subset.dropna(subset=['AddedAt', feature_choice])
+    subset = subset.sort_values('AddedAt')
+
+    # Plot
+    fig_feat, ax_feat = plt.subplots()
+    ax_feat.plot(subset['AddedAt'], subset[feature_choice], marker='o', linestyle='-')
+    ax_feat.set_title(f"{feature_choice} Over Time in '{playlist_choice}'")
+    ax_feat.set_ylabel(feature_choice)
+    ax_feat.set_xlabel("Date Added")
+    ax_feat.grid(True)
+    st.pyplot(fig_feat)
+else:
+    st.warning("Missing 'AddedAt' or 'Playlist' columns to build timeline.")
 
 
 
