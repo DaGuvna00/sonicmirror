@@ -351,6 +351,26 @@ if 'Playlist' in df.columns and 'AddedAt' in df.columns and 'ReleaseDate' in df.
 else:
     st.warning("Missing Playlist, AddedAt, or ReleaseDate columns.")
 
+# ─── 🥧 Genre Spread Pie Chart ───
+st.header("🥧 Genre Spread")
+
+if 'Genres' in df.columns and 'Playlist' in df.columns:
+    playlist_for_genres = st.selectbox("Select Playlist for Genre Breakdown", df['Playlist'].unique())
+
+    genre_df = df[df['Playlist'] == playlist_for_genres].copy()
+    genre_df['Genres'] = genre_df['Genres'].dropna().astype(str)
+
+    # Split multi-genre entries and flatten
+    genre_series = genre_df['Genres'].str.split(',').explode().str.strip()
+    top_genres = genre_series.value_counts().head(10)
+
+    fig_genre, ax_genre = plt.subplots()
+    ax_genre.pie(top_genres.values, labels=top_genres.index, autopct='%1.1f%%', startangle=140, counterclock=False)
+    ax_genre.set_title(f"Top Genres in '{playlist_for_genres}'")
+    st.pyplot(fig_genre)
+
+else:
+    st.warning("Missing 'Genres' or 'Playlist' column in the dataset.")
 
 
 
