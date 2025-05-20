@@ -1465,3 +1465,60 @@ else:
 # Display
 st.subheader(f"Your Music Zodiac Sign: {sign}")
 st.markdown(desc)
+
+# ─── 🌌 Playlist Birth Chart ───
+st.header("🌌 Playlist Birth Chart")
+
+birth_playlist = st.selectbox("Select a playlist for chart reading", df['Playlist'].unique(), key="birth_chart_select")
+bdf = df[df['Playlist'] == birth_playlist].copy()
+
+# ─ Sun Sign: Dominant Genre ─
+if 'Genres' in bdf.columns:
+    genres = bdf['Genres'].dropna().astype(str).str.split(',').explode().str.strip()
+    genre_mode = genres.mode()[0] if not genres.empty else "Unknown"
+else:
+    genre_mode = "Unknown"
+
+# ─ Moon Sign: Mood (Valence + Energy) ─
+val = bdf['Valence'].mean() if 'Valence' in bdf else 0.5
+energy = bdf['Energy'].mean() if 'Energy' in bdf else 0.5
+
+if val < 0.35 and energy < 0.4:
+    moon = "🌒 Melancholy Moon – Reflective, deep, and emotional"
+elif val > 0.65 and energy > 0.6:
+    moon = "🌕 Radiant Moon – Uplifting, bright, and full of joy"
+elif energy > 0.6:
+    moon = "🌓 Electric Moon – Energetic and expressive"
+elif val > 0.6:
+    moon = "🌔 Sentimental Moon – Warm, nostalgic, and sweet"
+else:
+    moon = "🌘 Wandering Moon – Ambiguous, layered, a mystery of moods"
+
+# ─ Rising Sign: Decade Lean ─
+if 'ReleaseDate' in bdf.columns:
+    years = bdf['ReleaseDate'].dt.year.dropna()
+    decade = int((years.mode()[0] // 10) * 10) if not years.empty else None
+else:
+    decade = None
+
+if decade:
+    if decade < 1980:
+        rising = "📼 Retro Rising – Soulful, timeless, vintage vibes"
+    elif decade < 2000:
+        rising = "📻 Analog Rising – Grunge, boom bap, golden age feel"
+    elif decade < 2015:
+        rising = "🎧 Millennial Rising – Alt, indie, bloghouse and big feelings"
+    elif decade >= 2015:
+        rising = "📲 Digital Rising – Fresh, experimental, TikTok-core"
+    else:
+        rising = "🌫 Undefined Rising – Eclectic with no clear origin point"
+else:
+    rising = "🌫 Undefined Rising – Eclectic with no clear origin point"
+
+# ─ Display Chart ─
+st.subheader(f"🎶 Playlist Birth Chart for '{birth_playlist}'")
+st.markdown(f"""
+- ☀️ **Sun Sign (Core Genre):** {genre_mode}
+- 🌙 **Moon Sign (Mood & Feel):** {moon}
+- 🌅 **Rising Sign (Era & Style):** {rising}
+""")
