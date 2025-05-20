@@ -976,10 +976,10 @@ else:
     else:
         st.info("No valid mood data found in the playlist.")
 
-# ─── 📆 Release Year vs Duration ───
+# ─── 📆 Track Duration Over Time ───
 st.header("📆 Track Duration Over Time")
 
-# Make sure necessary columns are present
+# Check required columns
 if 'ReleaseDate' in df.columns and 'Duration (ms)' in df.columns:
 
     df['ReleaseDate'] = pd.to_datetime(df['ReleaseDate'], errors='coerce')
@@ -990,6 +990,18 @@ if 'ReleaseDate' in df.columns and 'Duration (ms)' in df.columns:
     filtered = df.dropna(subset=['ReleaseYear', 'Duration (min)'])
 
     if not filtered.empty:
+        # Identify longest and shortest tracks
+        track_col = next((col for col in df.columns if col.lower() in ['track name', 'track']), 'Unknown')
+        artist_col = next((col for col in df.columns if col.lower() == 'artist'), 'Unknown')
+
+        longest = filtered.loc[filtered['Duration (min)'].idxmax()]
+        shortest = filtered.loc[filtered['Duration (min)'].idxmin()]
+
+        # Display insights
+        st.markdown(f"**📏 Longest Track:** {longest[track_col]} by {longest[artist_col]} — {longest['Duration (min)']:.2f} min ({int(longest['ReleaseYear'])})")
+        st.markdown(f"**🐜 Shortest Track:** {shortest[track_col]} by {shortest[artist_col]} — {shortest['Duration (min)']:.2f} min ({int(shortest['ReleaseYear'])})")
+
+        # Plot
         fig, ax = plt.subplots(figsize=(10, 6))
         sns.scatterplot(
             data=filtered,
