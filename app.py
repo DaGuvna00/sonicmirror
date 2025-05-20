@@ -1412,3 +1412,56 @@ for playlist in bias_df.index:
 # Optional comparison table
 if st.checkbox("Show comparison table"):
     st.dataframe(bias_df.round(2))
+
+# ─── 🔮 Music Zodiac Sign ───
+st.header("🔮 Music Zodiac Sign")
+
+zodiac_playlist = st.selectbox("Select a playlist to divine", df['Playlist'].unique(), key="zodiac_select")
+zdf = df[df['Playlist'] == zodiac_playlist].copy()
+
+val = zdf['Valence'].mean() if 'Valence' in zdf else 0.5
+energy = zdf['Energy'].mean() if 'Energy' in zdf else 0.5
+dance = zdf['Danceability'].mean() if 'Danceability' in zdf else 0.5
+acoustic = zdf['Acousticness'].mean() if 'Acousticness' in zdf else 0.5
+speech = zdf['Speechiness'].mean() if 'Speechiness' in zdf else 0.5
+pop = zdf['Popularity'].mean() if 'Popularity' in zdf else 50
+tempo_std = zdf['Tempo'].std() if 'Tempo' in zdf else 0
+release = zdf['ReleaseDate'].dropna()
+recent_pct = (release > pd.Timestamp.now() - pd.DateOffset(years=1)).mean() if not release.empty else 0
+
+# Decade lean
+decades = release.dt.year.dropna().floordiv(10) * 10
+decade_mode = decades.mode()[0] if not decades.empty else 2020
+
+# Assignment logic
+if val > 0.65 and energy > 0.6:
+    sign = "🔥 Solar Flare"
+    desc = "Radiant, confident, and alive. Your music uplifts rooms — even if no one's in them."
+elif val < 0.35 and energy < 0.4:
+    sign = "🌊 Lunar Drifter"
+    desc = "You float in emotion like ink in water. Your playlist is the night drive after a heavy truth."
+elif tempo_std > 30:
+    sign = "🌪 Stormchild"
+    desc = "Unpredictable and wild. Your tracks swing from light to heavy, soft to brutal, in seconds."
+elif dance > 0.7 and val > 0.55:
+    sign = "🌈 Joybringer"
+    desc = "You bring the groove, the bounce, the serotonin. Your playlist throws its own party."
+elif acoustic > 0.5 and speech < 0.4:
+    sign = "🧊 Glassmind"
+    desc = "Minimalist and meticulous. You don’t just listen — you *study* the sound."
+elif val < 0.3 and pop < 50:
+    sign = "🕳 Voidwalker"
+    desc = "Dark, underground, maybe a little haunted. You don’t chase charts — you chase ghosts."
+elif decade_mode < 2000:
+    sign = "🐉 Ancient Pulse"
+    desc = f"You're rooted in the {decade_mode}s. Old souls live in your playlists."
+elif recent_pct > 0.5:
+    sign = "🚀 Futurebender"
+    desc = "You're already living in the next wave. Your playlists are scouting missions into tomorrow."
+else:
+    sign = "🌀 Fringe Oracle"
+    desc = "Your taste resists patterns. You are the algorithm's blind spot — and that's beautiful."
+
+# Display
+st.subheader(f"Your Music Zodiac Sign: {sign}")
+st.markdown(desc)
