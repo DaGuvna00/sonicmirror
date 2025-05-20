@@ -1522,3 +1522,71 @@ st.markdown(f"""
 - 🌙 **Moon Sign (Mood & Feel):** {moon}
 - 🌅 **Rising Sign (Era & Style):** {rising}
 """)
+
+# ─── 🧍 If Your Playlist Were a Person ───
+st.header("🧍 If Your Playlist Were a Person...")
+
+persona_playlist = st.selectbox("Select a playlist to humanize", df['Playlist'].unique(), key="persona_select")
+pdf = df[df['Playlist'] == persona_playlist].copy()
+
+# Stats
+avg_val = pdf['Valence'].mean() if 'Valence' in pdf else 0.5
+avg_energy = pdf['Energy'].mean() if 'Energy' in pdf else 0.5
+avg_pop = pdf['Popularity'].mean() if 'Popularity' in pdf else 50
+avg_speech = pdf['Speechiness'].mean() if 'Speechiness' in pdf else 0.5
+avg_instr = pdf['Instrumentalness'].mean() if 'Instrumentalness' in pdf else 0.3
+avg_dance = pdf['Danceability'].mean() if 'Danceability' in pdf else 0.5
+
+# Age / Era
+if 'ReleaseDate' in pdf:
+    year = pdf['ReleaseDate'].dt.year.dropna().mode()[0] if not pdf['ReleaseDate'].isna().all() else 2015
+else:
+    year = 2015
+
+# Genre
+if 'Genres' in pdf.columns:
+    genres = pdf['Genres'].dropna().astype(str).str.split(',').explode().str.strip()
+    top_genre = genres.mode()[0] if not genres.empty else "Indie"
+else:
+    top_genre = "Indie"
+
+# Build persona
+if avg_val > 0.7 and avg_energy > 0.6:
+    vibe = "confident extrovert who dances like nobody’s watching (and doesn’t care if you are)."
+elif avg_val < 0.4 and avg_energy < 0.4:
+    vibe = "quiet and introspective, probably journaling under a tree somewhere."
+elif avg_energy > 0.6:
+    vibe = "fast-talking, hype-driven, a little chaotic but in a fun way."
+elif avg_val < 0.3:
+    vibe = "low-key heartbroken with great taste."
+else:
+    vibe = "pretty chill, good with people, but likes alone time too."
+
+# Popularity = social status
+if avg_pop > 70:
+    social = "hangs with the popular crowd but is surprisingly down to earth."
+elif avg_pop < 30:
+    social = "obscure, misunderstood, possibly lives off-grid and makes killer playlists."
+else:
+    social = "comfortable in any room, genre-fluid, probably owns a denim jacket with pins."
+
+# Instrumentalness = hobbies
+if avg_instr > 0.5:
+    hobby = "loves ambient hikes, late-night lo-fi, and probably owns a synth."
+elif avg_speech > 0.5:
+    hobby = "obsessed with lyrics, wordplay, and makes epic break-up playlists for friends."
+elif avg_dance > 0.7:
+    hobby = "first on the dance floor, last to leave. Probably DJs house parties."
+else:
+    hobby = "likes deep cuts, coffee shops, and makes great mixtapes no one else understands."
+
+# Final character sketch
+st.subheader(f"🎭 Your Playlist as a Person:")
+st.markdown(f"""
+- **Name:** [Redacted, but probably cool]
+- **Born:** Around {year}
+- **Style:** {top_genre} aesthetic
+- **Vibe:** {vibe}
+- **Social Scene:** {social}
+- **Hobbies & Habits:** {hobby}
+""")
