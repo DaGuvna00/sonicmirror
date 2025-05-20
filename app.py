@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from wordcloud import WordCloud
 import io
+import seaborn as sns
 
 # ─── Page Config ───
 st.set_page_config(page_title="SonicMirror Exportify Analyzer", layout="wide")
@@ -327,6 +328,7 @@ if 'Popularity' in df.columns:
     )
 else:
     st.warning("No 'Popularity' column found in your data for popularity analysis.")
+
 
 # ─── Tempo Heatmap by Playlist ───
 st.header("🎚️ Tempo Heatmap")
