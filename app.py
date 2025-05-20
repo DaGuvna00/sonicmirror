@@ -1129,16 +1129,19 @@ if all(f in df.columns for f in mbti_features):
 
     avg = df[df['Playlist'] == mbti_playlist][mbti_features].mean()
 
-    # ─ Normalize for visualization ─
-    norm_avg = (avg - avg.min()) / (avg.max() - avg.min())
+  # ─ Visual Profile (Exclude LagDays from chart) ─
+display_features = [f for f in mbti_features if f != 'LagDays']
+norm_avg_display = avg[display_features]
+norm_avg_display = (norm_avg_display - norm_avg_display.min()) / (norm_avg_display.max() - norm_avg_display.min())
 
-    st.subheader("📊 Feature Profile (Normalized)")
-    fig_bar, ax = plt.subplots()
-    ax.barh(norm_avg.index[::-1], norm_avg.values[::-1], color='slateblue')
-    ax.set_xlim(0, 1)
-    ax.set_xlabel("Normalized Value (0–1)")
-    ax.set_title("Audio Feature Profile")
-    st.pyplot(fig_bar)
+st.subheader("📊 Feature Profile (Normalized, Without LagDays)")
+fig_bar, ax = plt.subplots()
+ax.barh(norm_avg_display.index[::-1], norm_avg_display.values[::-1], color='slateblue')
+ax.set_xlim(0, 1)
+ax.set_xlabel("Normalized Value (0–1)")
+ax.set_title("Audio Feature Profile (Excludes LagDays)")
+st.pyplot(fig_bar)
+
 
     # ─ Custom Threshold Sliders ─
     with st.expander("🎛 Fine-tune MBTI Thresholds"):
