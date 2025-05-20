@@ -24,14 +24,18 @@ if uploaded_files:
     for f in uploaded_files:
         name = f.name.rsplit('.', 1)[0]
         df = None
+
         try:
             if f.name.lower().endswith('.csv'):
-                df = pd.read_csv(f)
+                df = pd.read_csv(f, encoding='utf-8')
             else:
                 sheets = pd.read_excel(f, sheet_name=None)
                 df = pd.concat(sheets.values(), ignore_index=True)
 
-            # Standardize column names
+            # Ensure we actually got columns
+            if df.shape[1] < 2:
+                continue
+
             df = df.rename(columns={
                 'Artist Name(s)': 'Artist',
                 'Track Name': 'Track',
@@ -43,12 +47,15 @@ if uploaded_files:
             playlists.append(df)
 
         except Exception:
-            pass  # fail silently
+            continue  # fail silently and move on
 
     if not playlists:
+        st.error("No valid files uploaded. Please check your Exportify export format.")
         st.stop()
+
     data = pd.concat(playlists, ignore_index=True)
 else:
+    st.info("📥 Upload at least one Exportify file to begin analysis.")
     st.stop()
 
 
