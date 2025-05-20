@@ -87,8 +87,6 @@ ax.set_ylabel(feat)
 ax.set_title(f"Average {feat} by Playlist")
 st.pyplot(fig)
 
-st.write("Columns in your data:", df.columns.tolist())
-
 # ─── Discovery Lag Distribution ───
 st.header("⏱ Discovery Lag Distribution")
 fig2, ax2 = plt.subplots()
@@ -263,43 +261,45 @@ if len(avgs) > 1:
 else:
     st.info("At least 2 playlists are needed to compute PCA positioning.")
 
-# ─── Unique Moments & Outliers ───
+# ─── Most Distinctive Tracks by Feature ───
 st.header("🧬 Unique Tracks: Vocals, Volume & Vibes")
 
-# Prep data
-outliers_df = df.copy()
-outliers_df = outliers_df[['Playlist', 'Track Name', 'Artist', 'Speechiness', 'Instrumentalness', 'Loudness', 'Energy']].dropna()
+# Smart detection of column names
+track_col = next((col for col in df.columns if col.lower().strip() in ['track name', 'track']), None)
+artist_col = next((col for col in df.columns if col.lower().strip() == 'artist'), None)
 
-# Most speech-like
-speechy = outliers_df.sort_values(by='Speechiness', ascending=False).head(5)
-st.subheader("🎙️ Most Speech-Driven Tracks")
-st.dataframe(speechy[['Track Name', 'Artist', 'Speechiness']])
+# Proceed only if required columns are present
+if track_col and artist_col:
+    outliers_df = df[['Playlist', track_col, artist_col, 'Speechiness', 'Instrumentalness', 'Loudness', 'Energy']].dropna()
 
-# Most instrumental
-instr = outliers_df.sort_values(by='Instrumentalness', ascending=False).head(5)
-st.subheader("🎼 Most Instrumental Tracks")
-st.dataframe(instr[['Track Name', 'Artist', 'Instrumentalness']])
+    # 🎙️ Speechiest Tracks
+    st.subheader("🎙️ Most Speech-Driven Tracks")
+    speechy = outliers_df.sort_values(by='Speechiness', ascending=False).head(5)
+    st.dataframe(speechy[[track_col, artist_col, 'Speechiness']])
 
-# Loudest and quietest
-loudest = outliers_df.sort_values(by='Loudness', ascending=False).head(3)
-quietest = outliers_df.sort_values(by='Loudness', ascending=True).head(3)
-st.subheader("🔊 Loudest & Most Mellow")
-st.markdown("**Loudest:**")
-st.dataframe(loudest[['Track Name', 'Artist', 'Loudness']])
-st.markdown("**Quietest:**")
-st.dataframe(quietest[['Track Name', 'Artist', 'Loudness']])
+    # 🎻 Most Instrumental
+    st.subheader("🎻 Most Instrumental Tracks")
+    instr = outliers_df.sort_values(by='Instrumentalness', ascending=False).head(5)
+    st.dataframe(instr[[track_col, artist_col, 'Instrumentalness']])
 
-# Energy outliers (very low or high)
-st.subheader("⚡ Most Chill vs Hyper")
-chill = outliers_df.sort_values(by='Energy').head(3)
-hype = outliers_df.sort_values(by='Energy', ascending=False).head(3)
-col1, col2 = st.columns(2)
-with col1:
-    st.markdown("😴 Chillest:")
-    st.dataframe(chill[['Track Name', 'Artist', 'Energy']])
-with col2:
-    st.markdown("💥 Most Hype:")
-    st.dataframe(hype[['Track Name', 'Artist', 'Energy']])
+    # 🔊 Loudest
+    st.subheader("🔊 Loudest Tracks")
+    loudest = outliers_df.sort_values(by='Loudness', ascending=False).head(5)
+    st.dataframe(loudest[[track_col, artist_col, 'Loudness']])
+
+    # 🔈 Quietest
+    st.subheader("🔈 Quietest Tracks")
+    quietest = outliers_df.sort_values(by='Loudness', ascending=True).head(5)
+    st.dataframe(quietest[[track_col, artist_col, 'Loudness']])
+
+    # ⚡ Highest Energy
+    st.subheader("⚡ Highest Energy Tracks")
+    high_energy = outliers_df.sort_values(by='Energy', ascending=False).head(5)
+    st.dataframe(high_energy[[track_col, artist_col, 'Energy']])
+
+else:
+    st.warning("Missing 'Track' or 'Artist' column in your data.")
+
 
 
 
