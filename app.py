@@ -1144,7 +1144,7 @@ st.pyplot(fig_bar)
 
 
     # ─ Custom Threshold Sliders ─
- with st.expander("🎛 Fine-tune MBTI Thresholds"):
+with st.expander("🎛 Fine-tune MBTI Thresholds"):
     energy_thresh = st.slider("Extroversion (Energy)", 0.3, 0.9, 0.55)
     speech_thresh = st.slider("Extroversion (Speechiness)", 0.2, 0.7, 0.4)
     instr_thresh = st.slider("Intuition (Instrumentalness)", 0.1, 0.8, 0.3)
