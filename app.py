@@ -1117,3 +1117,54 @@ if 'Playlist' in df.columns and all(f in df.columns for f in features):
     st.dataframe(avg.round(3).to_frame("Average Value"))
 else:
     st.warning("Missing required audio features.")
+
+# ─── 🧠 MBTI Playlist Personality Mapper ───
+st.header("🧬 MBTI Personality Match")
+
+mbti_features = ['Energy', 'Valence', 'Danceability', 'Acousticness', 'Instrumentalness', 'Speechiness', 'Tempo', 'LagDays']
+
+if all(f in df.columns for f in mbti_features):
+    mbti_playlist = st.selectbox("Select a playlist for MBTI profiling", df['Playlist'].unique(), key="mbti_select")
+    avg = df[df['Playlist'] == mbti_playlist][mbti_features].mean()
+
+    # ─ MBTI Axis Scoring ─
+    # You can tweak these thresholds for better tuning later
+
+    # I vs E (Introvert/Extrovert)
+    ie = "E" if avg['Energy'] > 0.55 or avg['Speechiness'] > 0.4 else "I"
+
+    # N vs S (iNtuitive/Sensing)
+    ns = "N" if avg['Instrumentalness'] > 0.3 or avg['Acousticness'] > 0.5 else "S"
+
+    # T vs F (Thinking/Feeling)
+    tf = "F" if avg['Valence'] > 0.5 else "T"
+
+    # J vs P (Judging/Perceiving)
+    variability = df[df['Playlist'] == mbti_playlist]['Tempo'].std()
+    lag_variance = df[df['Playlist'] == mbti_playlist]['LagDays'].std()
+    jp = "P" if variability > 15 or lag_variance > 100 else "J"
+
+    mbti = ie + ns + tf + jp
+
+    # ─ Descriptions ─
+    mbti_profiles = {
+        "ENFP": "🎉 **The Sonic Adventurer** – Your playlist bursts with color, movement, and contradictions. It's a road trip with no map, windows down, chasing soundwaves.",
+        "INTJ": "🧠 **The Sonic Architect** – Meticulous, brooding, structured. Your playlist is a cathedral of sound: cold steel and stained glass synths.",
+        "ISTP": "😎 **The Chill Tinkerer** – Minimalist, groovy, no-nonsense. You like tracks that feel like a shrug in slow motion.",
+        "ESFJ": "❤️ **The Harmonizer** – Warmth and community. These songs feel like hugs, sing-alongs, and the golden hour on a weekend.",
+        "INFP": "🌌 **The Dream Weaver** – Emotional depth, acoustic resonance, and a taste for the sublime. Each song is a diary entry you forgot you wrote.",
+        "ENTP": "⚡ **The Idea Storm** – Chaotic good energy. You're genre-fluid, tempo-erratic, and always seeking the next sonic rabbit hole.",
+        "ISFJ": "🌿 **The Nostalgic Soul** – Gentle, familiar, and comforting. Your music is the audio version of vintage Polaroids and slow Sunday mornings.",
+        "ESTP": "🔥 **The Night Burner** – Fast beats, hard drops, zero apologies. Your playlist could DJ an underground warehouse rave at 3am.",
+        # Add more if you want...
+    }
+
+    desc = mbti_profiles.get(mbti, f"🌀 **The Enigma ({mbti})** – Your playlist defies all boxes. Even this one.")
+
+    # ─ Output ─
+    st.subheader(f"🧬 Your Playlist MBTI Type: `{mbti}`")
+    st.markdown(desc)
+    st.markdown("**Feature Averages Used:**")
+    st.dataframe(avg.round(3).to_frame("Average Value"))
+else:
+    st.warning("Missing required features for MBTI mapping.")
