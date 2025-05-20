@@ -1129,18 +1129,21 @@ if all(f in df.columns for f in mbti_features):
 
     avg = df[df['Playlist'] == mbti_playlist][mbti_features].mean()
 
-  # ─ Visual Profile (Exclude LagDays from chart) ─
-display_features = [f for f in mbti_features if f != 'LagDays']
+ # ─ Visual Profile (Exclude LagDays and Tempo from chart) ─
+display_features = [f for f in mbti_features if f not in ['LagDays', 'Tempo']]
 norm_avg_display = avg[display_features]
+
+# Normalize these features only (0–1 scaling)
 norm_avg_display = (norm_avg_display - norm_avg_display.min()) / (norm_avg_display.max() - norm_avg_display.min())
 
-st.subheader("📊 Feature Profile (Normalized, Without LagDays)")
+st.subheader("📊 Feature Profile (Normalized, No LagDays or Tempo)")
 fig_bar, ax = plt.subplots()
 ax.barh(norm_avg_display.index[::-1], norm_avg_display.values[::-1], color='slateblue')
 ax.set_xlim(0, 1)
 ax.set_xlabel("Normalized Value (0–1)")
-ax.set_title("Audio Feature Profile (Excludes LagDays)")
+ax.set_title("Audio Feature Profile (Excludes Tempo & LagDays)")
 st.pyplot(fig_bar)
+
 
 
     # ─ Custom Threshold Sliders ─
