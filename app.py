@@ -29,10 +29,12 @@ if uploaded_files:
 if 'raw_files' in st.session_state and st.session_state['raw_files']:
     st.success(f"{len(st.session_state['raw_files'])} file(s) uploaded.")
 
-    if st.button("🔍 Start Analysis"):
+    if st.button("🔍 Start Analysis") or st.session_state.get("retry_failed"):
         import time
         import io
         playlists = []
+        failed_files = []
+        status_messages = []
 
         with st.spinner("📱 Processing your playlists..."):
             time.sleep(0.3)
@@ -63,6 +65,8 @@ if 'raw_files' in st.session_state and st.session_state['raw_files']:
                         time.sleep(0.2)
 
                 if df is None:
+                    failed_files.append(f.name)
+                    status_messages.append(f"❌ {f.name} — Failed after 3 attempts")
                     continue
 
                 df = df.rename(columns={
@@ -74,14 +78,27 @@ if 'raw_files' in st.session_state and st.session_state['raw_files']:
 
                 df['Playlist'] = name
                 playlists.append(df)
+                status_messages.append(f"✅ {f.name} — Loaded successfully")
+
+        for msg in status_messages:
+            st.markdown(msg)
 
         if not playlists:
             st.error("⚠️ No valid playlists found. Try uploading again.")
+            st.session_state.pop("retry_failed", None)
             st.stop()
 
         data = pd.concat(playlists, ignore_index=True)
         st.session_state['data'] = data
+        st.session_state.pop("retry_failed", None)
         st.success("✅ Playlists loaded successfully. Ready to analyze!")
+
+        # Retry failed button
+        if failed_files:
+            if st.button("🔁 Retry Failed Files"):
+                st.session_state['raw_files'] = [f for f in uploaded_files if f.name in failed_files]
+                st.session_state['retry_failed'] = True
+                st.experimental_rerun()
 
 # Only show analysis controls if data is parsed
 if 'data' in st.session_state:
@@ -93,7 +110,6 @@ if 'data' in st.session_state:
     selected_feats = st.sidebar.multiselect("Select audio features", features, default=features)
 else:
     st.sidebar.info("Upload playlists and click 'Start Analysis' to begin.")
-
 # ─── Date Parsing & Lag Calculation ───
 if 'data' in st.session_state:
     data = st.session_state['data']
