@@ -28,15 +28,15 @@ if uploaded_files:
         df = None
         
         try:
-        # Reset file pointer — especially important for mobile
-        f.seek(0)
+            # Reset file pointer — especially important for mobile
+            f.seek(0)
 
-    if f.name.lower().endswith('.csv'):
-        df = pd.read_csv(f, encoding='utf-8')
-    else:
-        f.seek(0)
-        sheets = pd.read_excel(f, sheet_name=None)
-        df = pd.concat(sheets.values(), ignore_index=True)
+            if f.name.lower().endswith('.csv'):
+                df = pd.read_csv(f, encoding='utf-8')
+            else:
+                f.seek(0)
+                sheets = pd.read_excel(f, sheet_name=None)
+                df = pd.concat(sheets.values(), ignore_index=True)
 
         try:
             # Try reading CSV or Excel
