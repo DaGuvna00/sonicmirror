@@ -11,67 +11,67 @@ st.set_page_config(page_title="SonicMirror Exportify Analyzer", layout="wide")
 st.title("🎶 SonicMirror – Exportify Playlist Analyzer")
 
 
-st.sidebar.header("📂 If on Mobile try a few times")
-
 st.sidebar.header("📂 Upload Exportify Exports")
 
 uploaded_files = st.sidebar.file_uploader(
     "Select one or more Exportify CSV/Excel files",
     type=["csv", "xls", "xlsx"],
-    accept_multiple_files=True
+    accept_multiple_files=True,
+    key="file_uploader"
 )
 
+# Store uploaded files in session_state
 if uploaded_files:
-    import time
-    playlists = []
-
-    with st.spinner("📡 Processing files... please wait a moment on mobile"):
-        time.sleep(0.5)  # Give time for mobile file readiness
-
-        for f in uploaded_files:
-            name = f.name.rsplit('.', 1)[0]
-            df = None
-
-            try:
-                f.seek(0)
-
-                if f.name.lower().endswith('.csv'):
-                    df = pd.read_csv(f, encoding='utf-8')
-                else:
-                    f.seek(0)
-                    sheets = pd.read_excel(f, sheet_name=None)
-                    df = pd.concat(sheets.values(), ignore_index=True)
-
-                if df.empty or df.shape[1] < 2:
-                    continue
-
-                df = df.rename(columns={
-                    'Artist Name(s)': 'Artist',
-                    'Track Name': 'Track',
-                    'Added At': 'AddedAt',
-                    'Release Date': 'ReleaseDate'
-                })
-
-                df['Playlist'] = name
-                playlists.append(df)
-
-            except Exception:
-                continue
-
-    if not playlists:
-        st.error("⚠️ No valid files uploaded. Please re-export from Exportify and try again.")
-        st.stop()
-
-    data = pd.concat(playlists, ignore_index=True)
-
-else:
-    st.info("📥 Upload at least one Exportify file to begin analysis.")
-    st.stop()
+    st.session_state['raw_files'] = uploaded_files
 
 
     # Combine all playlists into one DataFrame
     data = pd.concat(playlists, ignore_index=True)
 
+if 'raw_files' in st.session_state and st.session_state['raw_files']:
+    st.success(f"{len(st.session_state['raw_files'])} file(s) uploaded.")
+    
+    if st.button("🔍 Start Analysis"):
+        with st.spinner("📡 Processing your playlists..."):
+            time.sleep(0.3)  # buffer delay
+
+            playlists = []
+
+            for f in st.session_state['raw_files']:
+                name = f.name.rsplit('.', 1)[0]
+                df = None
+
+                try:
+                    f.seek(0)
+                    if f.name.lower().endswith('.csv'):
+                        df = pd.read_csv(f, encoding='utf-8')
+                    else:
+                        f.seek(0)
+                        sheets = pd.read_excel(f, sheet_name=None)
+                        df = pd.concat(sheets.values(), ignore_index=True)
+
+                    if df.empty or df.shape[1] < 2:
+                        continue
+
+                    df = df.rename(columns={
+                        'Artist Name(s)': 'Artist',
+                        'Track Name': 'Track',
+                        'Added At': 'AddedAt',
+                        'Release Date': 'ReleaseDate'
+                    })
+
+                    df['Playlist'] = name
+                    playlists.append(df)
+
+                except Exception:
+                    continue
+
+            if not playlists:
+                st.error("⚠️ No valid playlists found. Try uploading again.")
+                st.stop()
+
+            data = pd.concat(playlists, ignore_index=True)
+            st.success("✅ Playlists loaded successfully. Ready to analyze!")
 
 
     
