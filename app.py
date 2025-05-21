@@ -99,7 +99,12 @@ if 'data' in st.session_state:
 
 
 # ─── Filter & Prepare Dashboard Data ───
-df = data[data['Playlist'].isin(selected)].copy()
+if 'data' in st.session_state:
+    data = st.session_state['data']
+    df = data[data['Playlist'].isin(selected)].copy()
+else:
+    st.warning("No playlist data available yet. Upload and run analysis first.")
+    st.stop()
 
 # ─── Main Dashboard ───
 st.header("📋 Combined Playlist Overview")
