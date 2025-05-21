@@ -31,6 +31,7 @@ if 'raw_files' in st.session_state and st.session_state['raw_files']:
 
     if st.button("🔍 Start Analysis"):
         import time
+        import io
         playlists = []
 
         with st.spinner("📱 Processing your playlists..."):
@@ -40,30 +41,39 @@ if 'raw_files' in st.session_state and st.session_state['raw_files']:
                 name = f.name.rsplit('.', 1)[0]
                 df = None
 
-                try:
-                    f.seek(0)
-                    if f.name.lower().endswith('.csv'):
-                        df = pd.read_csv(f, encoding='utf-8')
-                    else:
+                for attempt in range(3):
+                    try:
                         f.seek(0)
-                        sheets = pd.read_excel(f, sheet_name=None)
-                        df = pd.concat(sheets.values(), ignore_index=True)
+                        buffer = io.BytesIO(f.read())
+                        buffer.seek(0)
 
-                    if df.empty or df.shape[1] < 2:
-                        continue
+                        if f.name.lower().endswith('.csv'):
+                            df = pd.read_csv(buffer, encoding='utf-8')
+                        else:
+                            buffer.seek(0)
+                            sheets = pd.read_excel(buffer, sheet_name=None)
+                            df = pd.concat(sheets.values(), ignore_index=True)
 
-                    df = df.rename(columns={
-                        'Artist Name(s)': 'Artist',
-                        'Track Name': 'Track',
-                        'Added At': 'AddedAt',
-                        'Release Date': 'ReleaseDate'
-                    })
+                        if df.empty or df.shape[1] < 2:
+                            raise ValueError("Empty or invalid structure")
 
-                    df['Playlist'] = name
-                    playlists.append(df)
+                        break  # successful read
+                    except Exception:
+                        df = None
+                        time.sleep(0.2)
 
-                except Exception:
+                if df is None:
                     continue
+
+                df = df.rename(columns={
+                    'Artist Name(s)': 'Artist',
+                    'Track Name': 'Track',
+                    'Added At': 'AddedAt',
+                    'Release Date': 'ReleaseDate'
+                })
+
+                df['Playlist'] = name
+                playlists.append(df)
 
         if not playlists:
             st.error("⚠️ No valid playlists found. Try uploading again.")
@@ -83,7 +93,6 @@ if 'data' in st.session_state:
     selected_feats = st.sidebar.multiselect("Select audio features", features, default=features)
 else:
     st.sidebar.info("Upload playlists and click 'Start Analysis' to begin.")
-
 
 # ─── Date Parsing & Lag Calculation ───
 if 'data' in st.session_state:
