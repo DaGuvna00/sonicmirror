@@ -11,6 +11,7 @@ st.set_page_config(page_title="SonicMirror Exportify Analyzer", layout="wide")
 st.title("🎶 SonicMirror – Exportify Playlist Analyzer")
 
 
+# ─── Upload and Parse Exportify Files ───
 st.sidebar.header("📂 Upload Exportify Exports")
 
 uploaded_files = st.sidebar.file_uploader(
@@ -24,18 +25,16 @@ uploaded_files = st.sidebar.file_uploader(
 if uploaded_files:
     st.session_state['raw_files'] = uploaded_files
 
-
-    # Combine all playlists into one DataFrame
-    data = pd.concat(playlists, ignore_index=True)
-
+# Trigger parse only after user confirms
 if 'raw_files' in st.session_state and st.session_state['raw_files']:
     st.success(f"{len(st.session_state['raw_files'])} file(s) uploaded.")
-    
-    if st.button("🔍 Start Analysis"):
-        with st.spinner("📡 Processing your playlists..."):
-            time.sleep(0.3)  # buffer delay
 
-            playlists = []
+    if st.button("🔍 Start Analysis"):
+        import time
+        playlists = []
+
+        with st.spinner("📱 Processing your playlists..."):
+            time.sleep(0.3)
 
             for f in st.session_state['raw_files']:
                 name = f.name.rsplit('.', 1)[0]
@@ -66,22 +65,25 @@ if 'raw_files' in st.session_state and st.session_state['raw_files']:
                 except Exception:
                     continue
 
-            if not playlists:
-                st.error("⚠️ No valid playlists found. Try uploading again.")
-                st.stop()
+        if not playlists:
+            st.error("⚠️ No valid playlists found. Try uploading again.")
+            st.stop()
 
-            data = pd.concat(playlists, ignore_index=True)
-            st.success("✅ Playlists loaded successfully. Ready to analyze!")
+        data = pd.concat(playlists, ignore_index=True)
+        st.session_state['data'] = data
+        st.success("✅ Playlists loaded successfully. Ready to analyze!")
 
+# Only show analysis controls if data is parsed
+if 'data' in st.session_state:
+    data = st.session_state['data']
+    st.sidebar.header("🔎 Analysis Options")
+    playlist_names = data['Playlist'].unique().tolist()
+    selected = st.sidebar.multiselect("Choose playlists to include", playlist_names, default=playlist_names)
+    features = ['Energy','Valence','Danceability','Acousticness','Instrumentalness','Liveness','Speechiness','Tempo','Loudness']
+    selected_feats = st.sidebar.multiselect("Select audio features", features, default=features)
+else:
+    st.sidebar.info("Upload playlists and click 'Start Analysis' to begin.")
 
-    
-
-# ─── Sidebar Controls ───
-st.sidebar.header("🔎 Analysis Options")
-playlist_names = data['Playlist'].unique().tolist()
-selected = st.sidebar.multiselect("Choose playlists to include", playlist_names, default=playlist_names)
-features = ['Energy','Valence','Danceability','Acousticness','Instrumentalness','Liveness','Speechiness','Tempo','Loudness']
-selected_feats = st.sidebar.multiselect("Select audio features", features, default=features)
 
 # ─── Date Parsing & Lag Calculation ───
 # Convert to UTC then drop timezone so both columns align
