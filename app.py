@@ -11,7 +11,6 @@ st.set_page_config(page_title="SonicMirror Exportify Analyzer", layout="wide")
 st.title("🎶 SonicMirror – Exportify Playlist Analyzer")
 
 
-# ─── Upload and Parse Exportify Files ───
 st.sidebar.header("📂 Upload Exportify Exports")
 
 uploaded_files = st.sidebar.file_uploader(
@@ -21,16 +20,20 @@ uploaded_files = st.sidebar.file_uploader(
 )
 
 if uploaded_files:
+    import time
     playlists = []
 
-    with st.spinner("📡 Processing files... please wait a moment on mobile"):
+    # Force spinner zone to render
+    status_placeholder = st.empty()
+
+    with status_placeholder.spinner("📡 Processing files... please wait a moment on mobile"):
+        time.sleep(0.5)  # Extra buffer for mobile file readiness
+
         for f in uploaded_files:
             name = f.name.rsplit('.', 1)[0]
             df = None
 
             try:
-                import time
-                time.sleep(0.2)  # Short delay helps mobile file buffer catch up
                 f.seek(0)
 
                 if f.name.lower().endswith('.csv'):
@@ -59,6 +62,9 @@ if uploaded_files:
     if not playlists:
         st.error("⚠️ No valid files uploaded. Please re-export from Exportify and try again.")
         st.stop()
+
+    # Show success message after processing
+    status_placeholder.success(f"✅ {len(playlists)} playlist(s) loaded successfully.")
 
     data = pd.concat(playlists, ignore_index=True)
 
