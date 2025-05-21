@@ -23,54 +23,52 @@ uploaded_files = st.sidebar.file_uploader(
 if uploaded_files:
     playlists = []
 
-    import time 
-    
-    for f in uploaded_files:
-        name = f.name.rsplit('.', 1)[0]
-        df = None
+    with st.spinner("📡 Processing files... please wait a moment on mobile"):
+        for f in uploaded_files:
+            name = f.name.rsplit('.', 1)[0]
+            df = None
 
-        try:
-            # ⏳ Add tiny delay to allow full memory buffer
-            time.sleep(0.2)
-
-        # 💡 Reset file pointer before read (required on mobile)
-            f.seek(0)
-
-            if f.name.lower().endswith('.csv'):
-                df = pd.read_csv(f, encoding='utf-8')
-            else:
+            try:
+                import time
+                time.sleep(0.2)  # Short delay helps mobile file buffer catch up
                 f.seek(0)
-                sheets = pd.read_excel(f, sheet_name=None)
-                df = pd.concat(sheets.values(), ignore_index=True)
-            
-            # Skip if file is empty or malformed
-            if df.empty or df.shape[1] < 2:
+
+                if f.name.lower().endswith('.csv'):
+                    df = pd.read_csv(f, encoding='utf-8')
+                else:
+                    f.seek(0)
+                    sheets = pd.read_excel(f, sheet_name=None)
+                    df = pd.concat(sheets.values(), ignore_index=True)
+
+                if df.empty or df.shape[1] < 2:
+                    continue
+
+                df = df.rename(columns={
+                    'Artist Name(s)': 'Artist',
+                    'Track Name': 'Track',
+                    'Added At': 'AddedAt',
+                    'Release Date': 'ReleaseDate'
+                })
+
+                df['Playlist'] = name
+                playlists.append(df)
+
+            except Exception:
                 continue
-
-            # Normalize column names
-            df = df.rename(columns={
-                'Artist Name(s)': 'Artist',
-                'Track Name': 'Track',
-                'Added At': 'AddedAt',
-                'Release Date': 'ReleaseDate'
-            })
-
-            df['Playlist'] = name
-            playlists.append(df)
-
-        except Exception:
-            continue  # Silent fail for bad files
 
     if not playlists:
         st.error("⚠️ No valid files uploaded. Please re-export from Exportify and try again.")
         st.stop()
 
-    # Combine all playlists into one DataFrame
     data = pd.concat(playlists, ignore_index=True)
 
 else:
     st.info("📥 Upload at least one Exportify file to begin analysis.")
     st.stop()
+
+    # Combine all playlists into one DataFrame
+    data = pd.concat(playlists, ignore_index=True)
+
 
 
     
