@@ -86,11 +86,16 @@ else:
 
 
 # ─── Date Parsing & Lag Calculation ───
-# Convert to UTC then drop timezone so both columns align
-data['AddedAt'] = pd.to_datetime(data['AddedAt'], errors='coerce', utc=True).dt.tz_convert(None)
-data['ReleaseDate'] = pd.to_datetime(data['ReleaseDate'], errors='coerce', utc=True).dt.tz_convert(None)
-# Compute discovery lag in days
-data['LagDays'] = (data['AddedAt'] - data['ReleaseDate']).dt.days
+if 'data' in st.session_state:
+    data = st.session_state['data']
+    
+    # Convert to UTC then drop timezone so both columns align
+    data['AddedAt'] = pd.to_datetime(data['AddedAt'], errors='coerce', utc=True).dt.tz_convert(None)
+    data['ReleaseDate'] = pd.to_datetime(data['ReleaseDate'], errors='coerce', utc=True).dt.tz_convert(None)
+
+    # Compute discovery lag in days
+    data['LagDays'] = (data['AddedAt'] - data['ReleaseDate']).dt.days
+
 
 
 # ─── Filter & Prepare Dashboard Data ───
