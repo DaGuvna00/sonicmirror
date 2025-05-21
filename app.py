@@ -23,22 +23,26 @@ uploaded_files = st.sidebar.file_uploader(
 if uploaded_files:
     playlists = []
 
+    import time 
+    
     for f in uploaded_files:
         name = f.name.rsplit('.', 1)[0]
         df = None
 
         try:
-            # Reset file pointer — required especially for mobile
+            # ⏳ Add tiny delay to allow full memory buffer
+            time.sleep(0.2)
+
+        # 💡 Reset file pointer before read (required on mobile)
             f.seek(0)
 
-            # Read CSV or Excel file
             if f.name.lower().endswith('.csv'):
                 df = pd.read_csv(f, encoding='utf-8')
             else:
                 f.seek(0)
                 sheets = pd.read_excel(f, sheet_name=None)
                 df = pd.concat(sheets.values(), ignore_index=True)
-
+            
             # Skip if file is empty or malformed
             if df.empty or df.shape[1] < 2:
                 continue
