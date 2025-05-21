@@ -13,6 +13,8 @@ st.title("🎶 SonicMirror – Exportify Playlist Analyzer")
 
 st.sidebar.header("📂 Upload Exportify Exports")
 
+st.sidebar.header("📂 Upload Exportify Exports")
+
 uploaded_files = st.sidebar.file_uploader(
     "Select one or more Exportify CSV/Excel files",
     type=["csv", "xls", "xlsx"],
@@ -23,11 +25,8 @@ if uploaded_files:
     import time
     playlists = []
 
-    # Force spinner zone to render
-    status_placeholder = st.empty()
-
-    with status_placeholder.spinner("📡 Processing files... please wait a moment on mobile"):
-        time.sleep(0.5)  # Extra buffer for mobile file readiness
+    with st.spinner("📡 Processing files... please wait a moment on mobile"):
+        time.sleep(0.5)  # Give time for mobile file readiness
 
         for f in uploaded_files:
             name = f.name.rsplit('.', 1)[0]
@@ -63,14 +62,12 @@ if uploaded_files:
         st.error("⚠️ No valid files uploaded. Please re-export from Exportify and try again.")
         st.stop()
 
-    # Show success message after processing
-    status_placeholder.success(f"✅ {len(playlists)} playlist(s) loaded successfully.")
-
     data = pd.concat(playlists, ignore_index=True)
 
 else:
     st.info("📥 Upload at least one Exportify file to begin analysis.")
     st.stop()
+
 
     # Combine all playlists into one DataFrame
     data = pd.concat(playlists, ignore_index=True)
