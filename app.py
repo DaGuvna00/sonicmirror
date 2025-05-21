@@ -24,45 +24,35 @@ if uploaded_files:
     playlists = []
 
     for f in uploaded_files:
-        name = f.name.rsplit('.', 1)[0]
-        df = None
-        
-        try:
-            # Reset file pointer — especially important for mobile
-            f.seek(0)
+    name = f.name.rsplit('.', 1)[0]
+    df = None
 
-            if f.name.lower().endswith('.csv'):
-                df = pd.read_csv(f, encoding='utf-8')
-            else:
-                f.seek(0)
-                sheets = pd.read_excel(f, sheet_name=None)
-                df = pd.concat(sheets.values(), ignore_index=True)
+    try:
+        f.seek(0)  # ← Reset file pointer to the start for mobile compatibility
 
-        try:
-            # Try reading CSV or Excel
-            if f.name.lower().endswith('.csv'):
-                df = pd.read_csv(f, encoding='utf-8')
-            else:
-                sheets = pd.read_excel(f, sheet_name=None)
-                df = pd.concat(sheets.values(), ignore_index=True)
+        if f.name.lower().endswith('.csv'):
+            df = pd.read_csv(f, encoding='utf-8')
+        else:
+            f.seek(0)  # ← Reset again before Excel read
+            sheets = pd.read_excel(f, sheet_name=None)
+            df = pd.concat(sheets.values(), ignore_index=True)
 
-            # Skip if file is structurally broken
-            if df.empty or df.shape[1] < 2:
-                continue
+        if df.empty or df.shape[1] < 2:
+            continue
 
-            # Normalize Exportify headers
-            df = df.rename(columns={
-                'Artist Name(s)': 'Artist',
-                'Track Name': 'Track',
-                'Added At': 'AddedAt',
-                'Release Date': 'ReleaseDate'
-            })
+        df = df.rename(columns={
+            'Artist Name(s)': 'Artist',
+            'Track Name': 'Track',
+            'Added At': 'AddedAt',
+            'Release Date': 'ReleaseDate'
+        })
 
-            df['Playlist'] = name
-            playlists.append(df)
+        df['Playlist'] = name
+        playlists.append(df)
 
-        except Exception:
-            continue  # Skip unreadable file silently
+    except Exception:
+        continue
+
 
     # Final check: no usable files
     if not playlists:
