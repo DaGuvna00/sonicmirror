@@ -11,7 +11,7 @@ st.set_page_config(page_title="SonicMirror Exportify Analyzer", layout="wide")
 st.title("🎶 SonicMirror – Exportify Playlist Analyzer")
 
 
-st.sidebar.header("📂 Upload Exportify Exports")
+st.sidebar.header("📂 If on Mobile try a few times")
 
 st.sidebar.header("📂 Upload Exportify Exports")
 
